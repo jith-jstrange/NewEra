@@ -79,6 +79,10 @@ newera/
 │   │   ├── StateManager.php # State management
 │   │   └── ModulesRegistry.php # Module registry
 │   ├── Database/          # Database functionality
+│   │   ├── DBAdapterInterface.php # Database adapter contract
+│   │   ├── WPDBAdapter.php # WordPress database adapter
+│   │   ├── ExternalDBAdapter.php # External database stub
+│   │   ├── RepositoryBase.php # Repository base class
 │   │   └── MigrationRunner.php # Migration system
 │   ├── Admin/             # Admin interface
 │   │   ├── AdminMenu.php  # Admin menu registration
@@ -127,11 +131,32 @@ Comprehensive logging system:
 - Automatic log rotation and cleanup
 - Contextual logging with additional data
 
-#### MigrationRunner (`Newera\Database\MigrationRunner`)
+#### Database Layer
+
+**DBAdapterInterface** (`Newera\Database\DBAdapterInterface`)
+Defines the contract for all database adapters with consistent query and transaction APIs.
+
+**WPDBAdapter** (`Newera\Database\WPDBAdapter`)
+WordPress database adapter implementing the standard DBAdapterInterface. Uses WordPress `$wpdb` object for all database operations, ensuring compatibility with WordPress database infrastructure.
+
+**ExternalDBAdapter** (`Newera\Database\ExternalDBAdapter`)
+Stub for external database connections. Provides configuration and connection methods without external credentials. Ready for future implementation of third-party database support.
+
+**RepositoryBase** (`Newera\Database\RepositoryBase`)
+Foundation class for data repositories with built-in query builder capabilities:
+- Standard CRUD operations (create, read, update, delete)
+- Finding records by ID or criteria
+- Count and exists operations
+- Transaction support
+- Raw query execution
+
+**MigrationRunner** (`Newera\Database\MigrationRunner`)
 Database migration system:
 - Tracks and runs database schema updates
 - Supports rollback functionality
 - Batch-based migration tracking
+- Idempotent execution (safe to run multiple times)
+- Comprehensive error logging
 
 ### Adding New Modules
 
@@ -159,6 +184,77 @@ class YourModule {
         // Module-specific functionality
     }
 }
+```
+
+### Using Database Adapters
+
+The plugin provides a database abstraction layer for flexible data access:
+
+```php
+<?php
+namespace Newera\Modules;
+
+use Newera\Database\WPDBAdapter;
+use Newera\Database\RepositoryBase;
+
+// Initialize the database adapter
+$db = new WPDBAdapter();
+
+// Test connection
+if ($db->test_connection()) {
+    echo "Database connected!";
+}
+
+// Get connection info
+$status = $db->get_connection_status();
+```
+
+### Creating Repositories
+
+Repositories provide a clean interface for data access:
+
+```php
+<?php
+namespace Newera\Repositories;
+
+use Newera\Database\RepositoryBase;
+use Newera\Database\DBAdapterInterface;
+
+class ClientRepository extends RepositoryBase {
+    protected $table = 'clients';
+    
+    public function find_active() {
+        return $this->find_by(['status' => 'active']);
+    }
+    
+    public function find_by_email($email) {
+        return $this->find_one(['email' => $email]);
+    }
+    
+    public function count_by_status($status) {
+        return $this->count(['status' => $status]);
+    }
+}
+
+// Usage:
+$db = new WPDBAdapter();
+$client_repo = new ClientRepository($db);
+
+// Find all active clients
+$clients = $client_repo->find_active();
+
+// Create a new client
+$client_id = $client_repo->create([
+    'name' => 'John Doe',
+    'email' => 'john@example.com',
+    'status' => 'active'
+]);
+
+// Update a client
+$client_repo->update($client_id, ['status' => 'inactive']);
+
+// Delete a client
+$client_repo->delete($client_id);
 ```
 
 ### Creating Migrations
@@ -213,9 +309,32 @@ Assets are automatically enqueued on Newera admin pages.
 
 ### Database
 
-The plugin creates these database tables:
+The plugin creates these database tables during activation:
+
+**Core Tables:**
+- `wp_newera_settings` - Plugin settings and configuration
 - `wp_newera_migrations` - Tracks database migrations
-- Logs are stored in `wp-content/newera-logs/`
+
+**Application Tables:**
+- `wp_clients` - Client information with encryption support
+  - Columns: id, name, email, phone, company, status, encrypted_data, timestamps, soft_delete
+- `wp_projects` - Project management data
+  - Columns: id, client_id, title, description, status, budget, encrypted_budget, progress, dates, timestamps, soft_delete
+- `wp_subscriptions` - Subscription tracking
+  - Columns: id, client_id, plan, status, amount, encrypted_amount, billing_cycle, dates, auto_renew, timestamps, soft_delete
+- `wp_webhooks` - Webhook configurations
+  - Columns: id, url, event, status, secret, encrypted_secret, retry tracking, timestamps, soft_delete
+- `wp_activity_logs` - Activity and audit logging
+  - Columns: id, user_id, action, entity_type, entity_id, description, ip_address, user_agent, status, metadata, created_at
+
+All tables support:
+- Timestamps (created_at, updated_at)
+- Status fields for state management
+- Encrypted columns for sensitive data
+- Soft deletes (deleted_at) for data retention
+- Proper indexing for performance
+
+Logs are stored in `wp-content/newera-logs/`
 
 ### Logging
 

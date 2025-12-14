@@ -26,7 +26,7 @@ class InitialMigration {
         // Create plugin settings table
         $table_name = $wpdb->prefix . 'newera_settings';
         $sql = "CREATE TABLE $table_name (
-            id int(11) NOT NULL AUTO_INCREMENT,
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             setting_key varchar(255) NOT NULL,
             setting_value longtext,
             autoload varchar(20) DEFAULT 'yes',
@@ -34,42 +34,6 @@ class InitialMigration {
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             UNIQUE KEY setting_key (setting_key)
-        ) $charset_collate;";
-
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
-
-        // Create plugin data table
-        $table_name = $wpdb->prefix . 'newera_data';
-        $sql = "CREATE TABLE $table_name (
-            id int(11) NOT NULL AUTO_INCREMENT,
-            data_key varchar(255) NOT NULL,
-            data_value longtext,
-            data_type varchar(50) DEFAULT 'string',
-            expires_at datetime NULL,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            UNIQUE KEY data_key (data_key)
-        ) $charset_collate;";
-
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
-
-        // Create activity log table
-        $table_name = $wpdb->prefix . 'newera_activity_log';
-        $sql = "CREATE TABLE $table_name (
-            id int(11) NOT NULL AUTO_INCREMENT,
-            user_id bigint(20) unsigned NULL,
-            action varchar(100) NOT NULL,
-            description text,
-            ip_address varchar(45),
-            user_agent text,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            KEY user_id (user_id),
-            KEY action (action),
-            KEY created_at (created_at)
         ) $charset_collate;";
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
@@ -104,10 +68,7 @@ class InitialMigration {
     public function down() {
         global $wpdb;
 
-        // Drop tables in reverse order
         $tables = [
-            $wpdb->prefix . 'newera_activity_log',
-            $wpdb->prefix . 'newera_data',
             $wpdb->prefix . 'newera_settings'
         ];
 
