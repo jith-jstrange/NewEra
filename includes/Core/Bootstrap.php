@@ -82,6 +82,9 @@ class Bootstrap {
         // Initialize modules
         $this->init_modules();
         
+        // Expose StateManager to other components
+        $this->expose_state_manager();
+        
         // Log initialization
         $this->logger->info('Newera plugin initialized successfully');
         
@@ -180,5 +183,28 @@ class Bootstrap {
      */
     public function get_logger() {
         return $this->logger;
+    }
+    
+    /**
+     * Expose StateManager to other components via filter
+     */
+    private function expose_state_manager() {
+        add_filter('newera_get_state_manager', function() {
+            return $this->get_state_manager();
+        });
+        
+        // Also make it available as a global function for backward compatibility
+        if (!function_exists('newera_get_state_manager')) {
+            function newera_get_state_manager() {
+                return apply_filters('newera_get_state_manager', null);
+            }
+        }
+        
+        // Log that StateManager is now available
+        if ($this->state_manager && $this->state_manager->is_crypto_available()) {
+            $this->logger->info('Secure credential storage is available via StateManager');
+        } else {
+            $this->logger->warning('Secure credential storage is not available - crypto functions missing');
+        }
     }
 }

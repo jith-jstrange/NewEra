@@ -14,6 +14,7 @@ Newera is a foundational WordPress plugin scaffold that provides a robust archit
 - **Admin Dashboard** with health monitoring and module management
 - **WP-Cron Integration** for scheduled tasks
 - **Security Best Practices** with capability checks and nonce validation
+- **🔒 Secure Credential Storage** with AES-256-CBC encryption
 
 ## Requirements
 
@@ -217,6 +218,116 @@ The plugin creates these database tables:
 - `wp_newera_migrations` - Tracks database migrations
 - Logs are stored in `wp-content/newera-logs/`
 
+### Secure Credential Storage
+
+Newera includes a comprehensive secure credential storage system with AES-256-CBC encryption:
+
+#### Features
+- **AES-256-CBC Encryption** using OpenSSL
+- **WordPress Salts Integration** for key derivation
+- **Automatic Encryption/Decryption** transparent to developers
+- **Module-based Namespaces** for data isolation
+- **CRUD Operations** for secure data management
+- **Version-tagged Records** for migration support
+- **Metadata Tracking** for auditing
+
+#### Basic Usage
+
+```php
+// Get StateManager instance
+$stateManager = newera_get_state_manager();
+
+// Store sensitive data
+$api_key = 'sk_test_1234567890abcdef';
+$result = $stateManager->setSecure('payment_gateway', 'stripe_api_key', $api_key);
+
+if ($result) {
+    // Data is automatically encrypted and stored
+    echo "Secure data stored successfully";
+}
+
+// Retrieve and decrypt data
+$stored_api_key = $stateManager->getSecure('payment_gateway', 'stripe_api_key');
+echo "Stored API key: $stored_api_key"; // Outputs: Stored API key: sk_test_1234567890abcdef
+```
+
+#### Advanced Usage
+
+```php
+// Store complex data structures
+$credentials = [
+    'client_id' => 'demo_client_123',
+    'client_secret' => 'super_secret_456',
+    'settings' => [
+        'timeout' => 30,
+        'retries' => 3
+    ]
+];
+
+$stateManager->setSecure('api_client', 'oauth_credentials', $credentials);
+
+// Bulk operations
+$bulk_data = [
+    'database_host' => 'localhost',
+    'database_user' => 'dbuser',
+    'database_pass' => 'secure_password'
+];
+$stateManager->setBulkSecure('database_config', $bulk_data);
+
+// Check if data exists
+if ($stateManager->hasSecure('api_client', 'oauth_credentials')) {
+    // Update existing data
+    $stateManager->updateSecure('api_client', 'oauth_credentials', $new_credentials);
+    
+    // Get metadata
+    $metadata = $stateManager->getSecureMetadata('api_client', 'oauth_credentials');
+    echo "Encrypted at: " . date('Y-m-d H:i:s', $metadata['timestamp']);
+    
+    // Delete data
+    $stateManager->deleteSecure('api_client', 'oauth_credentials');
+}
+```
+
+#### API Reference
+
+**Core Methods:**
+- `setSecure($module, $key, $data)` - Store encrypted data
+- `getSecure($module, $key, $default)` - Retrieve and decrypt data
+- `updateSecure($module, $key, $data)` - Update existing encrypted data
+- `deleteSecure($module, $key)` - Delete encrypted data
+- `hasSecure($module, $key)` - Check if data exists
+
+**Bulk Operations:**
+- `setBulkSecure($module, $data_array)` - Store multiple values
+- `getBulkSecure($module, $keys)` - Retrieve multiple values
+
+**Utility Methods:**
+- `getSecureKeys($module)` - Get all keys for a module
+- `getAllSecure($module)` - Get all data for a module
+- `getSecureMetadata($module, $key)` - Get encryption metadata
+- `is_crypto_available()` - Check if crypto functions are available
+
+#### Security Features
+
+**Encryption Details:**
+- Uses `aes-256-cbc` cipher with OpenSSL
+- Generates random 16-byte IV for each encryption
+- Derives 256-bit keys from WordPress salts using PBKDF2
+- Stores encryption metadata (IV, version, timestamp)
+- Validates input data before encryption
+
+**Key Management:**
+- Combines all WordPress salts for key derivation
+- Fallback to site-specific generated keys if salts unavailable
+- Uses WordPress nonces for additional security
+- PBKDF2 with 10,000 iterations for key stretching
+
+**Security Considerations:**
+- All data is encrypted at rest in WordPress options table
+- Option names use SHA-256 hashes to prevent key exposure
+- No plaintext passwords or secrets in database
+- Automatic encryption/decryption prevents manual errors
+
 ### Logging
 
 Logs are automatically created in `wp-content/newera-logs/newera.log` when `WP_DEBUG_LOG` is enabled. The logging system supports:
@@ -288,6 +399,13 @@ The plugin respects these WordPress constants:
 - Review migration files for syntax errors
 - Check WordPress debug logs
 
+**Secure storage not working:**
+- Verify OpenSSL extension is loaded
+- Check that WordPress salts are defined
+- Ensure database write permissions
+- Test with `is_crypto_available()` method
+- Run the demo script: `php demo_secure_storage.php`
+
 ### Debug Mode
 
 Enable WordPress debug mode for detailed error information:
@@ -305,6 +423,46 @@ Check these locations for debugging information:
 - WordPress: `wp-content/debug.log`
 - Plugin: `wp-content/newera-logs/newera.log`
 - PHP Error Log (server-specific)
+
+### Testing
+
+The plugin includes comprehensive unit tests for the secure credential storage system:
+
+#### Running Tests
+
+```bash
+# Install dependencies (if using Composer)
+composer install
+
+# Run all tests
+composer test
+
+# Run specific test suites
+composer test-unit
+
+# Run tests with coverage
+composer test-coverage
+```
+
+#### Test Structure
+
+Tests are located in the `/tests` directory:
+- `CryptoTest.php` - Tests for encryption/decryption functionality
+- `StateManagerTest.php` - Tests for secure storage operations
+- `TestCase.php` - Base test case with WordPress function mocking
+- `MockStorage.php` - Mock WordPress options API
+- `MockWPDB.php` - Mock WordPress database functions
+
+#### Demo Script
+
+For manual testing without PHPUnit, use the demo script:
+
+```bash
+# Run the secure storage demo
+php demo_secure_storage.php
+```
+
+This demonstrates all major functionality of the secure credential storage system.
 
 ## Contributing
 

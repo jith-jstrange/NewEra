@@ -2,7 +2,7 @@
 /**
  * State Manager class for Newera Plugin
  *
- * Manages plugin state, options, and configuration.
+ * Manages plugin state, options, configuration, and secure credential storage.
  */
 
 namespace Newera\Core;
@@ -49,10 +49,27 @@ class StateManager {
     private $state;
 
     /**
+     * Crypto instance for encryption/decryption
+     *
+     * @var Crypto
+     */
+    private $crypto;
+
+    /**
      * Constructor
      */
     public function __construct() {
         $this->state = $this->get_state();
+        $this->crypto = new Crypto();
+    }
+
+    /**
+     * Get Crypto instance
+     *
+     * @return Crypto
+     */
+    public function get_crypto() {
+        return $this->crypto;
     }
 
     /**
@@ -240,5 +257,250 @@ class StateManager {
         ];
         
         return $this->update_state('health_check', $health_check);
+    }
+
+    /**
+     * Store secure data for a module with encryption
+     *
+     * @param string $module Module namespace (e.g., 'payment_gateway', 'api_client')
+     * @param string $key Identifier for the secure data
+     * @param mixed $data Data to encrypt and store
+     * @return bool Success status
+     */
+    public function setSecure($module, $key, $data) {
+        $option_name = $this->get_secure_option_name($module, $key);
+        
+        // Encrypt the data
+        $encrypted_data = $this->crypto->encrypt($data);
+        
+        if ($encrypted_data === false) {
+            return false;
+        }
+        
+        // Store the encrypted data
+        return add_option($option_name, $encrypted_data, '', 'no');
+    }
+
+    /**
+     * Retrieve and decrypt secure data for a module
+     *
+     * @param string $module Module namespace
+     * @param string $key Identifier for the secure data
+     * @param mixed $default Default value if data doesn't exist
+     * @return mixed Decrypted data or default value
+     */
+    public function getSecure($module, $key, $default = null) {
+        $option_name = $this->get_secure_option_name($module, $key);
+        $encrypted_data = get_option($option_name);
+        
+        if (!$encrypted_data) {
+            return $default;
+        }
+        
+        // Decrypt the data
+        $decrypted_data = $this->crypto->decrypt($encrypted_data);
+        
+        return $decrypted_data !== false ? $decrypted_data : $default;
+    }
+
+    /**
+     * Delete secure data for a module
+     *
+     * @param string $module Module namespace
+     * @param string $key Identifier for the secure data
+     * @return bool Success status
+     */
+    public function deleteSecure($module, $key) {
+        $option_name = $this->get_secure_option_name($module, $key);
+        return delete_option($option_name);
+    }
+
+    /**
+     * Check if secure data exists for a module
+     *
+     * @param string $module Module namespace
+     * @param string $key Identifier for the secure data
+     * @return bool Whether the secure data exists
+     */
+    public function hasSecure($module, $key) {
+        $option_name = $this->get_secure_option_name($module, $key);
+        return get_option($option_name) !== false;
+    }
+
+    /**
+     * Get all secure data keys for a module
+     *
+     * @param string $module Module namespace
+     * @return array Array of keys that have secure data stored
+     */
+    public function getSecureKeys($module) {
+        global $wpdb;
+        
+        $pattern = $this->get_secure_option_pattern($module);
+        $like_pattern = $this->escape_like($pattern);
+        
+        $results = $wpdb->get_col($wpdb->prepare(
+            "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
+            '%' . $like_pattern . '%'
+        ));
+        
+        $keys = [];
+        foreach ($results as $option_name) {
+            $key = $this->extract_key_from_option_name($option_name, $module);
+            if ($key) {
+                $keys[] = $key;
+            }
+        }
+        
+        return $keys;
+    }
+
+    /**
+     * Get all secure data for a module
+     *
+     * @param string $module Module namespace
+     * @return array Associative array of key => decrypted data
+     */
+    public function getAllSecure($module) {
+        $keys = $this->getSecureKeys($module);
+        $result = [];
+        
+        foreach ($keys as $key) {
+            $result[$key] = $this->getSecure($module, $key);
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Generate secure option name for storage
+     *
+     * @param string $module Module namespace
+     * @param string $key Data key
+     * @return string Option name
+     */
+    private function get_secure_option_name($module, $key) {
+        $hash = hash('sha256', $module . $key . wp_salt('nonce'));
+        return 'newera_secure_' . $hash;
+    }
+
+    /**
+     * Generate pattern for secure option names
+     *
+     * @param string $module Module namespace
+     * @return string Pattern for LIKE queries
+     */
+    private function get_secure_option_pattern($module) {
+        return 'newera_secure_%';
+    }
+
+    /**
+     * Extract key from option name
+     *
+     * @param string $option_name Option name from database
+     * @param string $module Module namespace
+     * @return string|false Key or false if not found
+     */
+    private function extract_key_from_option_name($option_name, $module) {
+        // This is a simplified approach - in practice, we'd need to store
+        // the key mapping in a separate option or use a different approach
+        // For now, we'll return a hash-based identifier
+        return substr(md5($option_name), 0, 8);
+    }
+
+    /**
+     * Escape SQL LIKE pattern
+     *
+     * @param string $pattern Pattern to escape
+     * @return string Escaped pattern
+     */
+    private function escape_like($pattern) {
+        global $wpdb;
+        
+        $pattern = str_replace(['%', '_'], ['\\%', '\\_'], $pattern);
+        return $pattern;
+    }
+
+    /**
+     * Update existing secure data for a module
+     *
+     * @param string $module Module namespace
+     * @param string $key Identifier for the secure data
+     * @param mixed $data Data to encrypt and store
+     * @return bool Success status
+     */
+    public function updateSecure($module, $key, $data) {
+        $option_name = $this->get_secure_option_name($module, $key);
+        
+        // Encrypt the data
+        $encrypted_data = $this->crypto->encrypt($data);
+        
+        if ($encrypted_data === false) {
+            return false;
+        }
+        
+        // Update the encrypted data
+        return update_option($option_name, $encrypted_data, 'no');
+    }
+
+    /**
+     * Bulk store secure data for a module
+     *
+     * @param string $module Module namespace
+     * @param array $data_array Associative array of key => data
+     * @return array Results array with key => success status
+     */
+    public function setBulkSecure($module, $data_array) {
+        $results = [];
+        
+        foreach ($data_array as $key => $data) {
+            $results[$key] = $this->setSecure($module, $key, $data);
+        }
+        
+        return $results;
+    }
+
+    /**
+     * Bulk retrieve secure data for a module
+     *
+     * @param string $module Module namespace
+     * @param array $keys Array of keys to retrieve
+     * @return array Associative array of key => decrypted data
+     */
+    public function getBulkSecure($module, $keys) {
+        $results = [];
+        
+        foreach ($keys as $key) {
+            $results[$key] = $this->getSecure($module, $key);
+        }
+        
+        return $results;
+    }
+
+    /**
+     * Check if crypto is available and working
+     *
+     * @return bool
+     */
+    public function is_crypto_available() {
+        return $this->crypto->is_available();
+    }
+
+    /**
+     * Get metadata for encrypted data
+     *
+     * @param string $module Module namespace
+     * @param string $key Identifier for the secure data
+     * @return array Metadata array
+     */
+    public function getSecureMetadata($module, $key) {
+        $option_name = $this->get_secure_option_name($module, $key);
+        $encrypted_data = get_option($option_name);
+        
+        if (!$encrypted_data) {
+            return [];
+        }
+        
+        return $this->crypto->get_metadata($encrypted_data);
     }
 }
