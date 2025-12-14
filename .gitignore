@@ -1,0 +1,45 @@
+# WordPress plugin dependencies
+vendor/
+node_modules/
+composer.phar
+
+# WordPress core
+wp-config.php
+wp-content/uploads/
+wp-content/upgrade/
+wp-content/cache/
+wp-content/backup-*
+wp-content/old-config/
+
+# Development files
+.DS_Store
+.vscode/
+.idea/
+*.log
+logs/
+*.tmp
+
+# Plugin specific
+wp-content/newera-logs/
+wp-content/uploads/newera/
+
+# Package files
+*.tar.gz
+*.zip
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# WordPress debug logs
+wp-content/debug.log
+wp-content/newera-logs/newera.log
+
+# Database
+*.sqlite
+*.db
+
+# Backup files
+*.bak
+*.backup
