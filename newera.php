@@ -61,6 +61,7 @@ require_once NEWERA_INCLUDES_PATH . 'Core/Bootstrap.php';
 require_once NEWERA_INCLUDES_PATH . 'Core/StateManager.php';
 require_once NEWERA_INCLUDES_PATH . 'Core/ModulesRegistry.php';
 require_once NEWERA_INCLUDES_PATH . 'Core/Logger.php';
+require_once NEWERA_INCLUDES_PATH . 'Core/Crypto.php';
 require_once NEWERA_INCLUDES_PATH . 'Database/MigrationRunner.php';
 require_once NEWERA_INCLUDES_PATH . 'Admin/AdminMenu.php';
 require_once NEWERA_INCLUDES_PATH . 'Admin/Dashboard.php';
