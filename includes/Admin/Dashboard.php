@@ -31,6 +31,7 @@ class Dashboard {
         $recent_logs = $this->get_recent_logs();
         $modules_status = $this->get_modules_status();
         $health_info = $this->get_health_info();
+        $db_health = $this->get_database_health();
 
         // Include the dashboard template
         include NEWERA_PLUGIN_PATH . 'templates/admin/dashboard.php';
@@ -364,5 +365,33 @@ class Dashboard {
         ];
 
         return isset($badges[$status]) ? $badges[$status] : '<span class="newera-badge newera-badge-gray">UNKNOWN</span>';
+    }
+
+    /**
+     * Get database health information
+     *
+     * @return array
+     */
+    private function get_database_health() {
+        $db_factory = apply_filters('newera_get_db_factory', null);
+        
+        if (!$db_factory) {
+            return [
+                'available' => false,
+                'message' => 'Database factory not available'
+            ];
+        }
+
+        $metrics = $db_factory->get_health_metrics();
+        
+        return [
+            'available' => true,
+            'adapter_type' => $metrics['adapter_type'] ?? 'unknown',
+            'fallback_active' => $metrics['fallback_active'] ?? false,
+            'connected' => $metrics['connected'] ?? false,
+            'health_status' => $metrics['health_status'] ?? 'unknown',
+            'connection_details' => $metrics['connection_details'] ?? [],
+            'last_check' => $metrics['last_check'] ?? null,
+        ];
     }
 }

@@ -146,12 +146,77 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
                         <?php elseif ($current_step === 'database') : ?>
                             <tr>
                                 <th scope="row">
-                                    <label for="connection_name"><?php _e('Connection Name', 'newera'); ?></label>
+                                    <label for="db_type"><?php _e('Database Type', 'newera'); ?></label>
                                 </th>
                                 <td>
-                                    <input type="text" id="connection_name" name="connection_name" value="<?php echo esc_attr($saved_current['connection_name'] ?? ''); ?>" class="regular-text" />
+                                    <select id="db_type" name="db_type">
+                                        <?php
+                                        $db_type_value = $saved_current['db_type'] ?? 'wordpress';
+                                        $db_types = [
+                                            'wordpress' => __('WordPress Database (Default)', 'newera'),
+                                            'external' => __('External Database (PostgreSQL/Neon/Supabase)', 'newera'),
+                                        ];
+                                        foreach ($db_types as $value => $label) {
+                                            printf(
+                                                '<option value="%s" %s>%s</option>',
+                                                esc_attr($value),
+                                                selected($db_type_value, $value, false),
+                                                esc_html($label)
+                                            );
+                                        }
+                                        ?>
+                                    </select>
+                                    <p class="description"><?php _e('Select the database type for your plugin data storage.', 'newera'); ?></p>
                                 </td>
                             </tr>
+                            <tr id="external_db_options" style="display: <?php echo ($db_type_value === 'external') ? 'table-row' : 'none'; ?>;">
+                                <th scope="row">
+                                    <label for="connection_string"><?php _e('Connection String', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <textarea id="connection_string" name="connection_string" rows="3" class="large-text code"><?php echo esc_textarea($saved_current['connection_string'] ?? ''); ?></textarea>
+                                    <p class="description">
+                                        <?php _e('Format: postgresql://username:password@host:port/database?sslmode=require', 'newera'); ?><br>
+                                        <?php _e('Example: postgresql://user:pass@db.example.com:5432/mydb?sslmode=require', 'newera'); ?>
+                                    </p>
+                                    <p>
+                                        <button type="button" id="test_connection_btn" class="button button-secondary">
+                                            <?php _e('Test Connection', 'newera'); ?>
+                                        </button>
+                                        <span id="connection_test_result" style="margin-left: 10px;"></span>
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr id="table_prefix_row" style="display: <?php echo ($db_type_value === 'external') ? 'table-row' : 'none'; ?>;">
+                                <th scope="row">
+                                    <label for="table_prefix"><?php _e('Table Prefix', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="text" id="table_prefix" name="table_prefix" value="<?php echo esc_attr($saved_current['table_prefix'] ?? 'wp_'); ?>" class="regular-text" />
+                                    <p class="description"><?php _e('Table prefix for external database tables.', 'newera'); ?></p>
+                                </td>
+                            </tr>
+                            <tr id="persistent_row" style="display: <?php echo ($db_type_value === 'external') ? 'table-row' : 'none'; ?>;">
+                                <th scope="row">
+                                    <label for="persistent"><?php _e('Persistent Connection', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" id="persistent" name="persistent" value="1" <?php checked(!empty($saved_current['persistent'])); ?> />
+                                        <?php _e('Use persistent database connections', 'newera'); ?>
+                                    </label>
+                                    <p class="description"><?php _e('Persistent connections can improve performance but may consume more server resources.', 'newera'); ?></p>
+                                </td>
+                            </tr>
+                            <?php if (!empty($saved_current['migration_warning'])) : ?>
+                            <tr>
+                                <td colspan="2">
+                                    <div class="notice notice-warning inline">
+                                        <p><?php echo esc_html($saved_current['migration_warning']); ?></p>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endif; ?>
                         <?php elseif ($current_step === 'payments') : ?>
                             <tr>
                                 <th scope="row">
@@ -277,3 +342,66 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
         <?php _e('AJAX endpoint stub: wp_ajax_newera_setup_wizard_save_step', 'newera'); ?>
     </p>
 </div>
+
+<script>
+jQuery(document).ready(function($) {
+    // Database type selector
+    $('#db_type').on('change', function() {
+        var dbType = $(this).val();
+        if (dbType === 'external') {
+            $('#external_db_options, #table_prefix_row, #persistent_row').show();
+        } else {
+            $('#external_db_options, #table_prefix_row, #persistent_row').hide();
+        }
+    });
+
+    // Test connection button
+    $('#test_connection_btn').on('click', function(e) {
+        e.preventDefault();
+        
+        var $btn = $(this);
+        var $result = $('#connection_test_result');
+        var connectionString = $('#connection_string').val();
+
+        if (!connectionString) {
+            $result.html('<span style="color: #dc3232;">⚠ <?php _e('Please enter a connection string', 'newera'); ?></span>');
+            return;
+        }
+
+        $btn.prop('disabled', true).text('<?php _e('Testing...', 'newera'); ?>');
+        $result.html('<span style="color: #999;">⏳ <?php _e('Testing connection...', 'newera'); ?></span>');
+
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'newera_test_db_connection',
+                nonce: '<?php echo wp_create_nonce('newera_setup_wizard_ajax'); ?>',
+                connection_string: connectionString
+            },
+            success: function(response) {
+                if (response.success) {
+                    var details = response.data.details || {};
+                    var message = '✓ <?php _e('Connection successful!', 'newera'); ?>';
+                    if (details.driver || details.database) {
+                        message += ' (' + (details.driver || '?') + ' / ' + (details.database || '?') + ')';
+                    }
+                    $result.html('<span style="color: #46b450;">' + message + '</span>');
+                } else {
+                    $result.html('<span style="color: #dc3232;">✗ ' + (response.data || '<?php _e('Connection failed', 'newera'); ?>') + '</span>');
+                }
+            },
+            error: function(xhr) {
+                var message = '<?php _e('Connection failed', 'newera'); ?>';
+                if (xhr.responseJSON && xhr.responseJSON.data) {
+                    message = xhr.responseJSON.data;
+                }
+                $result.html('<span style="color: #dc3232;">✗ ' + message + '</span>');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text('<?php _e('Test Connection', 'newera'); ?>');
+            }
+        });
+    });
+});
+</script>
