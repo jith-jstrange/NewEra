@@ -61,6 +61,10 @@ if (file_exists(NEWERA_PLUGIN_PATH . 'vendor/autoload.php')) {
 require_once NEWERA_INCLUDES_PATH . 'Core/Bootstrap.php';
 require_once NEWERA_INCLUDES_PATH . 'Core/StateManager.php';
 require_once NEWERA_INCLUDES_PATH . 'Core/Logger.php';
+require_once NEWERA_INCLUDES_PATH . 'Database/DBAdapterInterface.php';
+require_once NEWERA_INCLUDES_PATH . 'Database/WPDBAdapter.php';
+require_once NEWERA_INCLUDES_PATH . 'Database/ExternalDBAdapter.php';
+require_once NEWERA_INCLUDES_PATH . 'Database/RepositoryBase.php';
 require_once NEWERA_INCLUDES_PATH . 'Core/Crypto.php';
 
 // Module framework (auto-discovered modules live in /modules)
@@ -80,17 +84,47 @@ require_once NEWERA_INCLUDES_PATH . 'Admin/SetupWizard.php';
  * Plugin activation hook
  */
 function newera_activate() {
-    // Run migrations
-    $migration_runner = new \Newera\Database\MigrationRunner();
-    $migration_runner->run();
+    global $wpdb;
     
-    // Schedule WP-Cron events placeholder
-    if (!wp_next_scheduled('newera_daily_cleanup')) {
-        wp_schedule_event(time(), 'daily', 'newera_daily_cleanup');
+    try {
+        // Run migrations
+        $migration_runner = new \Newera\Database\MigrationRunner();
+        $result = $migration_runner->run();
+        
+        if (!$result) {
+            throw new \Exception('Failed to run migrations');
+        }
+        
+        // Schedule WP-Cron events placeholder
+        if (!wp_next_scheduled('newera_daily_cleanup')) {
+            wp_schedule_event(time(), 'daily', 'newera_daily_cleanup');
+        }
+        
+        // Set activation flag
+        set_transient('newera_activated', true, 30);
+        
+        // Log activation
+        if (class_exists('\\Newera\\Core\\Logger')) {
+            $logger = new \Newera\Core\Logger();
+            $logger->info('Newera plugin activated successfully');
+        }
+        
+    } catch (\Exception $e) {
+        // Log activation error
+        if (class_exists('\\Newera\\Core\\Logger')) {
+            $logger = new \Newera\Core\Logger();
+            $logger->error('Plugin activation failed: ' . $e->getMessage());
+        }
+        
+        // Show admin error notice
+        add_action('admin_notices', function() {
+            echo '<div class="notice notice-error"><p>';
+            echo __('Newera plugin activation failed. Please check the error logs.', 'newera');
+            echo '</p></div>';
+        });
+        
+        return false;
     }
-    
-    // Set activation flag
-    set_transient('newera_activated', true, 30);
 }
 register_activation_hook(__FILE__, 'newera_activate');
 

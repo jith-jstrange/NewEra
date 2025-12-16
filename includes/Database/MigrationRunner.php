@@ -58,8 +58,21 @@ class MigrationRunner {
             // Run pending migrations
             $pending_migrations = array_diff($migration_files, $applied_migrations);
             
+            if (empty($pending_migrations)) {
+                // Log that there are no pending migrations
+                if (class_exists('\\Newera\\Core\\Logger')) {
+                    $logger = new \Newera\Core\Logger();
+                    $logger->info('No pending migrations to run');
+                }
+                return true;
+            }
+            
             foreach ($pending_migrations as $migration) {
                 $this->run_migration($migration);
+                if (class_exists('\\Newera\\Core\\Logger')) {
+                    $logger = new \Newera\Core\Logger();
+                    $logger->info('Migration executed: ' . $migration);
+                }
             }
             
             return true;
@@ -68,7 +81,7 @@ class MigrationRunner {
             // Log error if logger is available
             if (class_exists('\\Newera\\Core\\Logger')) {
                 $logger = new \Newera\Core\Logger();
-                $logger->error('Migration failed: ' . $e->getMessage());
+                $logger->error('Migration failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             }
             
             return false;
@@ -180,16 +193,13 @@ class MigrationRunner {
             // Run the migration
             $migration->up();
             
-            // Record the migration
+            // Record the migration (use INSERT IGNORE for idempotency)
             $batch = $this->get_next_batch_number();
-            $wpdb->insert(
-                $this->migration_table,
-                [
-                    'migration' => $migration_name,
-                    'batch' => $batch
-                ],
-                ['%s', '%d']
-            );
+            $wpdb->query($wpdb->prepare(
+                "INSERT IGNORE INTO {$this->migration_table} (migration, batch) VALUES (%s, %d)",
+                $migration_name,
+                $batch
+            ));
             
             $wpdb->query('COMMIT');
             
