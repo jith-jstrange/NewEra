@@ -34,6 +34,14 @@ class StateManager {
         'last_migration' => null,
         'modules_enabled' => [],
         'settings' => [],
+        'setup_wizard' => [
+            'completed' => false,
+            'completed_at' => null,
+            'current_step' => 'intro',
+            'completed_steps' => [],
+            'data' => [],
+            'last_updated' => null,
+        ],
         'health_check' => [
             'last_run' => null,
             'status' => 'ok',

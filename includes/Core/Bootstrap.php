@@ -51,6 +51,13 @@ class Bootstrap {
     private $admin_menu;
 
     /**
+     * Setup Wizard instance
+     *
+     * @var \Newera\Admin\SetupWizard
+     */
+    private $setup_wizard;
+
+    /**
      * Get instance of Bootstrap
      *
      * @return Bootstrap
@@ -125,6 +132,9 @@ class Bootstrap {
         if (is_admin()) {
             $this->admin_menu = new \Newera\Admin\AdminMenu();
             $this->admin_menu->init();
+
+            $this->setup_wizard = new \Newera\Admin\SetupWizard($this->state_manager);
+            $this->setup_wizard->init();
         }
     }
 
