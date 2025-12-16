@@ -30,6 +30,7 @@ define('NEWERA_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('NEWERA_INCLUDES_PATH', NEWERA_PLUGIN_PATH . 'includes/');
 define('NEWERA_ASSETS_URL', NEWERA_PLUGIN_URL . 'assets/');
 define('NEWERA_TEMPLATES_PATH', NEWERA_PLUGIN_PATH . 'templates/');
+define('NEWERA_MODULES_PATH', NEWERA_PLUGIN_PATH . 'modules/');
 
 // Check for required WordPress version
 if (version_compare(get_bloginfo('version'), '5.0', '<')) {
@@ -59,9 +60,17 @@ if (file_exists(NEWERA_PLUGIN_PATH . 'vendor/autoload.php')) {
 // Load core bootstrap files
 require_once NEWERA_INCLUDES_PATH . 'Core/Bootstrap.php';
 require_once NEWERA_INCLUDES_PATH . 'Core/StateManager.php';
-require_once NEWERA_INCLUDES_PATH . 'Core/ModulesRegistry.php';
 require_once NEWERA_INCLUDES_PATH . 'Core/Logger.php';
 require_once NEWERA_INCLUDES_PATH . 'Core/Crypto.php';
+
+// Module framework (auto-discovered modules live in /modules)
+require_once NEWERA_INCLUDES_PATH . 'Modules/ModuleInterface.php';
+require_once NEWERA_INCLUDES_PATH . 'Modules/BaseModule.php';
+require_once NEWERA_INCLUDES_PATH . 'Modules/ModuleRegistry.php';
+
+// Legacy registry (used by existing admin screens)
+require_once NEWERA_INCLUDES_PATH . 'Core/ModulesRegistry.php';
+
 require_once NEWERA_INCLUDES_PATH . 'Database/MigrationRunner.php';
 require_once NEWERA_INCLUDES_PATH . 'Admin/AdminMenu.php';
 require_once NEWERA_INCLUDES_PATH . 'Admin/Dashboard.php';

@@ -134,30 +134,61 @@ Database migration system:
 - Supports rollback functionality
 - Batch-based migration tracking
 
-### Adding New Modules
+### Adding New Integration Modules (Auto-Discovery)
 
-1. Create a new class in `/includes/Modules/YourModule.php`
-2. Extend the base module functionality as needed
-3. Register the module in `ModulesRegistry::init_built_in_modules()`
-4. Add proper capability checks and permissions
+Integration modules are auto-discovered from the plugin root `/modules/` directory by `Newera\Modules\ModuleRegistry`.
 
-Example module structure:
+**Conventions**
+
+- Place module code under: `/modules/<Type>/<YourModule>.php`
+- Namespace should match the folder structure under `Newera\\Modules\\...`
+  - Example file: `modules/Auth/AuthModule.php`
+  - Example class: `Newera\\Modules\\Auth\\AuthModule`
+- Implement `Newera\\Modules\\ModuleInterface` (recommended: extend `Newera\\Modules\\BaseModule`).
+
+**Lifecycle**
+
+- All discovered modules are instantiated and `boot()` is called during plugin init.
+- Modules remain *inactive* until configured/enabled by the setup wizard.
+  - Enablement is stored in `StateManager` under `modules_enabled`.
+  - Module configuration can be stored under `StateManager` settings key `modules` (per-module array).
+
+**Secure credential storage (per module)**
+
+Modules store credentials in encrypted options via `StateManager::setSecure/getSecure` scoped by the module id.
+When extending `BaseModule`, use the helpers:
+
+- `set_credential($key, $value)`
+- `get_credential($key, $default = null)`
+- `has_credential($key)`
+
+**Example**
+
 ```php
 <?php
-namespace Newera\Modules;
+namespace Newera\Modules\Example;
+
+use Newera\Modules\BaseModule;
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class YourModule {
-    public function init() {
-        // Module initialization logic
-        add_action('newera_yourmodule_init', [$this, 'your_init_method']);
+class ExampleModule extends BaseModule {
+    public function getId() { return 'example'; }
+    public function getName() { return 'Example'; }
+    public function getType() { return 'integrations'; }
+
+    public function isConfigured() {
+        return $this->has_credential('api_key');
     }
-    
-    public function your_init_method() {
-        // Module-specific functionality
+
+    public function registerHooks() {
+        add_action('init', [$this, 'init_example']);
+    }
+
+    public function init_example() {
+        // Runs only when enabled+configured.
     }
 }
 ```
