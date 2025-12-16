@@ -316,6 +316,9 @@ class SetupWizard {
             $wizard_state['completed'] = true;
             $wizard_state['completed_at'] = current_time('mysql');
             $wizard_state['current_step'] = 'review';
+            
+            // Trigger setup completion hooks for each configured provider
+            $this->trigger_setup_completion($wizard_state);
         }
 
         $this->state_manager->update_state(self::STATE_KEY, $wizard_state);
@@ -509,6 +512,9 @@ class SetupWizard {
 
             case 'payments':
                 $sanitized['provider'] = isset($data['provider']) ? sanitize_text_field($data['provider']) : '';
+                $sanitized['stripe_key'] = isset($data['stripe_key']) ? sanitize_text_field($data['stripe_key']) : '';
+                $sanitized['stripe_secret'] = isset($data['stripe_secret']) ? sanitize_text_field($data['stripe_secret']) : '';
+                $sanitized['default_currency'] = isset($data['default_currency']) ? sanitize_text_field($data['default_currency']) : 'usd';
                 break;
 
             case 'ai':
@@ -526,5 +532,18 @@ class SetupWizard {
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Trigger setup completion hooks for configured providers
+     */
+    private function trigger_setup_completion($wizard_state) {
+        // Trigger setup completion for Stripe payments if configured
+        if (isset($wizard_state['data']['payments']['provider']) && $wizard_state['data']['payments']['provider'] === 'stripe') {
+            if (class_exists('\\Newera\\Modules\\Payments\\StripeManager')) {
+                $stripe_manager = new \Newera\Modules\Payments\StripeManager($this->state_manager, null);
+                $stripe_manager->setup_wizard_completed();
+            }
+        }
     }
 }

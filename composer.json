@@ -1,7 +1,10 @@
 {
     "name": "newera/plugin",
-    "description": "Newera WordPress Plugin - Secure credential storage",
+    "description": "Newera WordPress Plugin - Secure credential storage with Stripe payments",
     "type": "wordpress-plugin",
+    "require": {
+        "stripe/stripe-php": "^10.0"
+    },
     "require-dev": {
         "phpunit/phpunit": "^9.0"
     },
