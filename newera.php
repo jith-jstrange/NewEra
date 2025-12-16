@@ -65,6 +65,7 @@ require_once NEWERA_INCLUDES_PATH . 'Core/Crypto.php';
 require_once NEWERA_INCLUDES_PATH . 'Database/MigrationRunner.php';
 require_once NEWERA_INCLUDES_PATH . 'Admin/AdminMenu.php';
 require_once NEWERA_INCLUDES_PATH . 'Admin/Dashboard.php';
+require_once NEWERA_INCLUDES_PATH . 'Admin/SetupWizard.php';
 
 /**
  * Plugin activation hook
