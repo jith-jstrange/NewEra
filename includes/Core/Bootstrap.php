@@ -30,11 +30,11 @@ class Bootstrap {
     private $state_manager;
 
     /**
-     * Modules Registry instance
+     * Module Registry instance (auto-discovered integration modules)
      *
-     * @var ModulesRegistry
+     * @var \Newera\Modules\ModuleRegistry
      */
-    private $modules_registry;
+    private $module_registry;
 
     /**
      * Logger instance
@@ -76,13 +76,13 @@ class Bootstrap {
         // Initialize components
         $this->init_logger();
         $this->init_state_manager();
-        $this->init_modules_registry();
+        $this->init_module_registry();
         $this->init_admin_menu();
         
-        // Initialize modules
+        // Boot discovered modules
         $this->init_modules();
         
-        // Expose StateManager to other components
+        // Expose services to other components
         $this->expose_state_manager();
         
         // Log initialization
@@ -111,11 +111,11 @@ class Bootstrap {
     }
 
     /**
-     * Initialize the Modules Registry
+     * Initialize the Module Registry
      */
-    private function init_modules_registry() {
-        $this->modules_registry = new ModulesRegistry();
-        $this->modules_registry->init();
+    private function init_module_registry() {
+        $this->module_registry = new \Newera\Modules\ModuleRegistry($this->state_manager, $this->logger);
+        $this->module_registry->init();
     }
 
     /**
@@ -129,23 +129,11 @@ class Bootstrap {
     }
 
     /**
-     * Initialize all registered modules
+     * Boot all discovered modules
      */
     private function init_modules() {
-        $modules = $this->modules_registry->get_modules();
-        
-        foreach ($modules as $module_name => $module_config) {
-            if (class_exists($module_config['class'])) {
-                try {
-                    $module = new $module_config['class']();
-                    if (method_exists($module, 'init')) {
-                        $module->init();
-                    }
-                    $this->logger->info("Module {$module_name} initialized");
-                } catch (\Exception $e) {
-                    $this->logger->error("Failed to initialize module {$module_name}: " . $e->getMessage());
-                }
-            }
+        if ($this->module_registry) {
+            $this->module_registry->boot();
         }
     }
 
@@ -168,12 +156,12 @@ class Bootstrap {
     }
 
     /**
-     * Get Modules Registry
+     * Get Module Registry
      *
-     * @return ModulesRegistry
+     * @return \Newera\Modules\ModuleRegistry|null
      */
     public function get_modules_registry() {
-        return $this->modules_registry;
+        return $this->module_registry;
     }
 
     /**
@@ -186,21 +174,39 @@ class Bootstrap {
     }
     
     /**
-     * Expose StateManager to other components via filter
+     * Expose core services to other components via filters.
      */
     private function expose_state_manager() {
         add_filter('newera_get_state_manager', function() {
             return $this->get_state_manager();
         });
-        
-        // Also make it available as a global function for backward compatibility
+
+        add_filter('newera_get_logger', function() {
+            return $this->get_logger();
+        });
+
+        add_filter('newera_get_module_registry', function() {
+            return $this->get_modules_registry();
+        });
+
         if (!function_exists('newera_get_state_manager')) {
             function newera_get_state_manager() {
                 return apply_filters('newera_get_state_manager', null);
             }
         }
-        
-        // Log that StateManager is now available
+
+        if (!function_exists('newera_get_logger')) {
+            function newera_get_logger() {
+                return apply_filters('newera_get_logger', null);
+            }
+        }
+
+        if (!function_exists('newera_get_module_registry')) {
+            function newera_get_module_registry() {
+                return apply_filters('newera_get_module_registry', null);
+            }
+        }
+
         if ($this->state_manager && $this->state_manager->is_crypto_available()) {
             $this->logger->info('Secure credential storage is available via StateManager');
         } else {
