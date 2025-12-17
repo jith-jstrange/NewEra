@@ -67,6 +67,13 @@ require_once NEWERA_INCLUDES_PATH . 'Database/ExternalDBAdapter.php';
 require_once NEWERA_INCLUDES_PATH . 'Database/RepositoryBase.php';
 require_once NEWERA_INCLUDES_PATH . 'Core/Crypto.php';
 
+// Load Payments classes
+require_once NEWERA_INCLUDES_PATH . 'Payments/StripeManager.php';
+require_once NEWERA_INCLUDES_PATH . 'Payments/PlanManager.php';
+require_once NEWERA_INCLUDES_PATH . 'Payments/SubscriptionRepository.php';
+require_once NEWERA_INCLUDES_PATH . 'Payments/WebhookHandler.php';
+require_once NEWERA_INCLUDES_PATH . 'Payments/WebhookEndpoint.php';
+
 // Module framework (auto-discovered modules live in /modules)
 require_once NEWERA_INCLUDES_PATH . 'Modules/ModuleInterface.php';
 require_once NEWERA_INCLUDES_PATH . 'Modules/BaseModule.php';
