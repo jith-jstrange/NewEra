@@ -302,6 +302,10 @@ class SetupWizard {
     private function save_step($step, $data) {
         $wizard_state = $this->get_wizard_state();
 
+        if ($step === 'auth') {
+            $this->persist_integration_credentials($data);
+        }
+
         $wizard_state['data'][$step] = $this->sanitize_step_data($step, $data);
 
         if (!in_array($step, $wizard_state['completed_steps'], true)) {
@@ -488,6 +492,53 @@ class SetupWizard {
     }
 
     /**
+     * Persist integration credentials from the wizard auth step.
+     *
+     * Credentials are stored via StateManager secure storage (no central registry).
+     *
+     * @param array $data Sanitized request data.
+     */
+    private function persist_integration_credentials($data) {
+        if (!is_array($data)) {
+            return;
+        }
+
+        // Linear
+        if (class_exists('\\Newera\\Integrations\\Linear\\LinearManager')) {
+            $linear = new \Newera\Integrations\Linear\LinearManager($this->state_manager);
+
+            if (!empty($data['linear_api_key'])) {
+                $linear->set_api_key($data['linear_api_key']);
+            }
+
+            if (!empty($data['linear_webhook_secret'])) {
+                $linear->set_webhook_secret($data['linear_webhook_secret']);
+            }
+
+            if (!empty($data['linear_team_id'])) {
+                $linear->set_team_id($data['linear_team_id']);
+            }
+        }
+
+        // Notion
+        if (class_exists('\\Newera\\Integrations\\Notion\\NotionManager')) {
+            $notion = new \Newera\Integrations\Notion\NotionManager($this->state_manager);
+
+            if (!empty($data['notion_api_key'])) {
+                $notion->set_api_key($data['notion_api_key']);
+            }
+
+            if (!empty($data['notion_webhook_secret'])) {
+                $notion->set_webhook_secret($data['notion_webhook_secret']);
+            }
+
+            if (!empty($data['notion_projects_database_id'])) {
+                $notion->set_projects_database_id($data['notion_projects_database_id']);
+            }
+        }
+    }
+
+    /**
      * Sanitize step-specific data.
      *
      * @param string $step Step id.
@@ -499,8 +550,22 @@ class SetupWizard {
 
         switch ($step) {
             case 'auth':
-                $sanitized['api_key'] = isset($data['api_key']) ? sanitize_text_field($data['api_key']) : '';
-                $sanitized['api_secret'] = isset($data['api_secret']) ? sanitize_text_field($data['api_secret']) : '';
+                $linear_configured = false;
+                if (class_exists('\\Newera\\Integrations\\Linear\\LinearManager')) {
+                    $linear = new \Newera\Integrations\Linear\LinearManager($this->state_manager);
+                    $linear_configured = method_exists($linear, 'is_configured') ? (bool) $linear->is_configured() : false;
+                }
+
+                $notion_configured = false;
+                if (class_exists('\\Newera\\Integrations\\Notion\\NotionManager')) {
+                    $notion = new \Newera\Integrations\Notion\NotionManager($this->state_manager);
+                    $notion_configured = method_exists($notion, 'is_configured') ? (bool) $notion->is_configured() : false;
+                }
+
+                $sanitized['linear_configured'] = $linear_configured;
+                $sanitized['linear_team_id'] = isset($data['linear_team_id']) ? sanitize_text_field($data['linear_team_id']) : '';
+                $sanitized['notion_configured'] = $notion_configured;
+                $sanitized['notion_projects_database_id'] = isset($data['notion_projects_database_id']) ? sanitize_text_field($data['notion_projects_database_id']) : '';
                 break;
 
             case 'database':

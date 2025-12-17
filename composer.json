@@ -15,7 +15,9 @@
             "Newera\\Core\\": "includes/Core/",
             "Newera\\Database\\": "includes/Database/",
             "Newera\\Admin\\": "includes/Admin/",
-            "Newera\\Modules\\": "includes/Modules/"
+            "Newera\\Modules\\": "includes/Modules/",
+            "Newera\\Projects\\": "includes/Projects/",
+            "Newera\\Integrations\\": "includes/Integrations/"
         }
     },
     "scripts": {
