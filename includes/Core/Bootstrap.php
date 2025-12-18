@@ -58,6 +58,13 @@ class Bootstrap {
     private $setup_wizard;
 
     /**
+     * API Manager instance
+     *
+     * @var \Newera\API\APIManager
+     */
+    private $api_manager;
+
+    /**
      * Get instance of Bootstrap
      *
      * @return Bootstrap
@@ -85,6 +92,9 @@ class Bootstrap {
         $this->init_state_manager();
         $this->init_module_registry();
         $this->init_admin_menu();
+        
+        // Initialize API Manager
+        $this->init_api_manager();
         
         // Boot discovered modules
         $this->init_modules();
@@ -136,6 +146,19 @@ class Bootstrap {
             $this->setup_wizard = new \Newera\Admin\SetupWizard($this->state_manager);
             $this->setup_wizard->init();
         }
+    }
+
+    /**
+     * Initialize API Manager
+     */
+    private function init_api_manager() {
+        $api_manager = new \Newera\API\APIManager();
+        $api_manager->init();
+        
+        // Store API manager instance
+        $this->api_manager = $api_manager;
+        
+        $this->logger->info('API Manager initialized successfully');
     }
 
     /**
