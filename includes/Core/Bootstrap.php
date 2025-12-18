@@ -58,6 +58,13 @@ class Bootstrap {
     private $setup_wizard;
 
     /**
+     * AI Command Handler instance
+     *
+     * @var \Newera\AI\CommandHandler
+     */
+    private $command_handler;
+
+    /**
      * Get instance of Bootstrap
      *
      * @return Bootstrap
@@ -85,6 +92,7 @@ class Bootstrap {
         $this->init_state_manager();
         $this->init_module_registry();
         $this->init_admin_menu();
+        $this->init_command_handler();
         
         // Boot discovered modules
         $this->init_modules();
@@ -136,6 +144,14 @@ class Bootstrap {
             $this->setup_wizard = new \Newera\Admin\SetupWizard($this->state_manager);
             $this->setup_wizard->init();
         }
+    }
+
+    /**
+     * Initialize Command Handler
+     */
+    private function init_command_handler() {
+        $this->command_handler = new \Newera\AI\CommandHandler($this->state_manager, $this->logger, $this->module_registry);
+        $this->command_handler->init();
     }
 
     /**
