@@ -128,6 +128,77 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
                             </tr>
                         <?php elseif ($current_step === 'auth') : ?>
                             <?php
+                            $linear_manager = function_exists('newera_get_linear_manager') ? newera_get_linear_manager() : null;
+                            $notion_manager = function_exists('newera_get_notion_manager') ? newera_get_notion_manager() : null;
+
+                            $linear_configured = $linear_manager && method_exists($linear_manager, 'is_configured') && $linear_manager->is_configured();
+                            $notion_configured = $notion_manager && method_exists($notion_manager, 'is_configured') && $notion_manager->is_configured();
+
+                            $linear_team_id_value = $saved_current['linear_team_id'] ?? ($linear_manager && method_exists($linear_manager, 'get_team_id') ? $linear_manager->get_team_id() : '');
+                            $notion_projects_db_value = $saved_current['notion_projects_database_id'] ?? ($notion_manager && method_exists($notion_manager, 'get_projects_database_id') ? $notion_manager->get_projects_database_id() : '');
+                            ?>
+
+                            <tr>
+                                <th scope="row">
+                                    <label for="linear_api_key"><?php _e('Linear API Key', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="password" id="linear_api_key" name="linear_api_key" value="" class="regular-text" autocomplete="off" />
+                                    <p class="description">
+                                        <?php echo $linear_configured ? esc_html__('A key is already stored securely. Leave blank to keep it.', 'newera') : esc_html__('Paste a Linear personal API key from the installer account.', 'newera'); ?>
+                                    </p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th scope="row">
+                                    <label for="linear_webhook_secret"><?php _e('Linear Webhook Secret', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="password" id="linear_webhook_secret" name="linear_webhook_secret" value="" class="regular-text" autocomplete="off" />
+                                    <p class="description"><?php _e('Used to validate incoming Linear webhook signatures.', 'newera'); ?></p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th scope="row">
+                                    <label for="linear_team_id"><?php _e('Linear Team ID', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="text" id="linear_team_id" name="linear_team_id" value="<?php echo esc_attr($linear_team_id_value); ?>" class="regular-text" />
+                                    <p class="description"><?php _e('Required to create issues from new projects. You can also configure this later under Newera → Integrations.', 'newera'); ?></p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th scope="row">
+                                    <label for="notion_api_key"><?php _e('Notion API Key', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="password" id="notion_api_key" name="notion_api_key" value="" class="regular-text" autocomplete="off" />
+                                    <p class="description">
+                                        <?php echo $notion_configured ? esc_html__('A key is already stored securely. Leave blank to keep it.', 'newera') : esc_html__('Paste a Notion integration token from the installer account.', 'newera'); ?>
+                                    </p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th scope="row">
+                                    <label for="notion_webhook_secret"><?php _e('Notion Webhook Secret', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="password" id="notion_webhook_secret" name="notion_webhook_secret" value="" class="regular-text" autocomplete="off" />
+                                    <p class="description"><?php _e('Used to validate incoming webhook requests (if configured).', 'newera'); ?></p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th scope="row">
+                                    <label for="notion_projects_database_id"><?php _e('Notion Projects Database ID', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="text" id="notion_projects_database_id" name="notion_projects_database_id" value="<?php echo esc_attr($notion_projects_db_value); ?>" class="regular-text" />
+                                    <p class="description"><?php _e('Optional. If set, projects will sync to a Notion database (Name/Status/Progress).', 'newera'); ?></p>
                             $auth_providers = isset($step_context['providers']) && is_array($step_context['providers']) ? $step_context['providers'] : [];
                             $enabled_providers = $saved_current['providers_enabled'] ?? ($step_context['enabled_providers'] ?? []);
                             $enabled_providers = is_array($enabled_providers) ? $enabled_providers : [];

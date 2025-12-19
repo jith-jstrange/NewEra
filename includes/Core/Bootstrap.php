@@ -58,6 +58,25 @@ class Bootstrap {
     private $setup_wizard;
 
     /**
+     * Project Manager instance.
+     *
+     * @var \Newera\Projects\ProjectManager
+     */
+    private $project_manager;
+
+    /**
+     * Linear integration manager.
+     *
+     * @var \Newera\Integrations\Linear\LinearManager
+     */
+    private $linear_manager;
+
+    /**
+     * Notion integration manager.
+     *
+     * @var \Newera\Integrations\Notion\NotionManager
+     */
+    private $notion_manager;
      * API Manager instance
      *
      * @var \Newera\API\APIManager
@@ -95,6 +114,11 @@ class Bootstrap {
         // Initialize components
         $this->init_logger();
         $this->init_state_manager();
+        $this->init_project_manager();
+        $this->init_integrations();
+        $this->init_module_registry();
+        $this->init_admin_menu();
+
         $this->init_db_factory();
         $this->init_module_registry();
         $this->init_admin_menu();
@@ -104,13 +128,15 @@ class Bootstrap {
         
         // Boot discovered modules
         $this->init_modules();
-        
+
         // Expose services to other components
+        $this->expose_state_manager();
+
         $this->expose_services();
         
         // Log initialization
         $this->logger->info('Newera plugin initialized successfully');
-        
+
         // Check for activation notice
         if (get_transient('newera_activated')) {
             add_action('admin_notices', [$this, 'activation_notice']);
@@ -134,6 +160,28 @@ class Bootstrap {
     }
 
     /**
+     * Initialize the Project Manager.
+     */
+    private function init_project_manager() {
+        if (class_exists('\\Newera\\Projects\\ProjectManager')) {
+            $this->project_manager = new \Newera\Projects\ProjectManager($this->logger);
+            $this->project_manager->init();
+        }
+    }
+
+    /**
+     * Initialize integrations (Linear/Notion).
+     */
+    private function init_integrations() {
+        if (class_exists('\\Newera\\Integrations\\Linear\\LinearManager')) {
+            $this->linear_manager = new \Newera\Integrations\Linear\LinearManager($this->state_manager, $this->logger, $this->project_manager);
+            $this->linear_manager->init();
+        }
+
+        if (class_exists('\\Newera\\Integrations\\Notion\\NotionManager')) {
+            $this->notion_manager = new \Newera\Integrations\Notion\NotionManager($this->state_manager, $this->logger, $this->project_manager);
+            $this->notion_manager->init();
+        }
      * Initialize the DB Adapter Factory
      */
     private function init_db_factory() {
@@ -220,6 +268,30 @@ class Bootstrap {
     }
 
     /**
+     * Get Project Manager.
+     *
+     * @return \Newera\Projects\ProjectManager|null
+     */
+    public function get_project_manager() {
+        return $this->project_manager;
+    }
+
+    /**
+     * Get Linear manager.
+     *
+     * @return \Newera\Integrations\Linear\LinearManager|null
+     */
+    public function get_linear_manager() {
+        return $this->linear_manager;
+    }
+
+    /**
+     * Get Notion manager.
+     *
+     * @return \Newera\Integrations\Notion\NotionManager|null
+     */
+    public function get_notion_manager() {
+        return $this->notion_manager;
      * Get DB Adapter Factory
      *
      * @return \Newera\Database\DBAdapterFactory
@@ -244,6 +316,16 @@ class Bootstrap {
             return $this->get_modules_registry();
         });
 
+        add_filter('newera_get_project_manager', function() {
+            return $this->get_project_manager();
+        });
+
+        add_filter('newera_get_linear_manager', function() {
+            return $this->get_linear_manager();
+        });
+
+        add_filter('newera_get_notion_manager', function() {
+            return $this->get_notion_manager();
         add_filter('newera_get_db_factory', function() {
             return $this->get_db_factory();
         });
@@ -266,6 +348,21 @@ class Bootstrap {
             }
         }
 
+        if (!function_exists('newera_get_project_manager')) {
+            function newera_get_project_manager() {
+                return apply_filters('newera_get_project_manager', null);
+            }
+        }
+
+        if (!function_exists('newera_get_linear_manager')) {
+            function newera_get_linear_manager() {
+                return apply_filters('newera_get_linear_manager', null);
+            }
+        }
+
+        if (!function_exists('newera_get_notion_manager')) {
+            function newera_get_notion_manager() {
+                return apply_filters('newera_get_notion_manager', null);
         if (!function_exists('newera_get_db_factory')) {
             function newera_get_db_factory() {
                 return apply_filters('newera_get_db_factory', null);

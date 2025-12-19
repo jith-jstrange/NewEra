@@ -231,6 +231,10 @@ class MigrationRunner {
      * @return string
      */
     private function get_migration_class_name($migration_name) {
+        // Filenames are timestamp-prefixed (e.g. 20231214000200_create_projects_table).
+        // Class names omit the timestamp (e.g. CreateProjectsTable).
+        $migration_name = preg_replace('/^\d+_/', '', (string) $migration_name);
+
         // Convert snake_case to PascalCase
         $class_name = str_replace('_', '', ucwords($migration_name, '_'));
         return $class_name;

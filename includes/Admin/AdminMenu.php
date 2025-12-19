@@ -92,6 +92,26 @@ class AdminMenu {
             $this->menu_slug . '-logs',                 // Menu slug
             [$this, 'display_logs']                     // Callback function
         );
+
+        // Projects submenu
+        add_submenu_page(
+            $this->menu_slug,
+            __('Projects', 'newera'),
+            __('Projects', 'newera'),
+            'manage_options',
+            $this->menu_slug . '-projects',
+            [$this, 'display_projects']
+        );
+
+        // Integrations submenu
+        add_submenu_page(
+            $this->menu_slug,
+            __('Integrations', 'newera'),
+            __('Integrations', 'newera'),
+            'manage_options',
+            $this->menu_slug . '-integrations',
+            [$this, 'display_integrations']
+        );
     }
 
     /**
@@ -190,6 +210,42 @@ class AdminMenu {
     }
 
     /**
+     * Display the projects page.
+     */
+    public function display_projects() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'newera'));
+        }
+
+        if (
+            isset($_POST['newera_projects_action'], $_POST['newera_projects_nonce'])
+            && wp_verify_nonce($_POST['newera_projects_nonce'], 'newera_projects_action')
+        ) {
+            $this->handle_projects_action($_POST);
+        }
+
+        $this->render_projects_page();
+    }
+
+    /**
+     * Display the integrations page.
+     */
+    public function display_integrations() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'newera'));
+        }
+
+        if (
+            isset($_POST['newera_integrations_action'], $_POST['newera_integrations_nonce'])
+            && wp_verify_nonce($_POST['newera_integrations_nonce'], 'newera_integrations_action')
+        ) {
+            $this->handle_integrations_action($_POST);
+        }
+
+        $this->render_integrations_page();
+    }
+
+    /**
      * Save settings
      *
      * @param array $data POST data
@@ -282,6 +338,191 @@ class AdminMenu {
         $log_content = file_exists($log_file) ? file_get_contents($log_file) : '';
 
         include NEWERA_PLUGIN_PATH . 'templates/admin/logs.php';
+    }
+
+    /**
+     * Handle create/delete actions for projects.
+     *
+     * @param array $post
+     */
+    private function handle_projects_action($post) {
+        $action = isset($post['projects_action_type']) ? sanitize_key($post['projects_action_type']) : '';
+
+        $project_manager = function_exists('newera_get_project_manager') ? newera_get_project_manager() : null;
+        if (!$project_manager || !method_exists($project_manager, 'create_project')) {
+            return;
+        }
+
+        if ($action === 'create') {
+            $result = $project_manager->create_project([
+                'client_id' => isset($post['client_id']) ? (int) $post['client_id'] : 0,
+                'title' => isset($post['title']) ? sanitize_text_field($post['title']) : '',
+                'description' => isset($post['description']) ? wp_kses_post($post['description']) : '',
+                'status' => isset($post['status']) ? sanitize_key($post['status']) : 'pending',
+                'progress' => isset($post['progress']) ? (int) $post['progress'] : 0,
+            ], get_current_user_id());
+
+            if (is_wp_error($result)) {
+                add_action('admin_notices', function() use ($result) {
+                    echo '<div class="notice notice-error"><p>' . esc_html($result->get_error_message()) . '</p></div>';
+                });
+            } else {
+                add_action('admin_notices', function() {
+                    echo '<div class="notice notice-success"><p>' . esc_html__('Project created.', 'newera') . '</p></div>';
+                });
+            }
+        }
+
+        if ($action === 'delete' && !empty($post['project_id'])) {
+            $result = $project_manager->delete_project((int) $post['project_id'], get_current_user_id());
+
+            if (is_wp_error($result)) {
+                add_action('admin_notices', function() use ($result) {
+                    echo '<div class="notice notice-error"><p>' . esc_html($result->get_error_message()) . '</p></div>';
+                });
+            } else {
+                add_action('admin_notices', function() {
+                    echo '<div class="notice notice-success"><p>' . esc_html__('Project deleted.', 'newera') . '</p></div>';
+                });
+            }
+        }
+    }
+
+    /**
+     * Render projects page.
+     */
+    private function render_projects_page() {
+        $project_manager = function_exists('newera_get_project_manager') ? newera_get_project_manager() : null;
+        $projects = $project_manager && method_exists($project_manager, 'list_projects_for_user')
+            ? $project_manager->list_projects_for_user(get_current_user_id(), ['limit' => 100])
+            : [];
+
+        include NEWERA_PLUGIN_PATH . 'templates/admin/projects.php';
+    }
+
+    /**
+     * Handle integration settings.
+     *
+     * @param array $post
+     */
+    private function handle_integrations_action($post) {
+        $linear = function_exists('newera_get_linear_manager') ? newera_get_linear_manager() : null;
+        $notion = function_exists('newera_get_notion_manager') ? newera_get_notion_manager() : null;
+        $state_manager = function_exists('newera_get_state_manager') ? newera_get_state_manager() : null;
+
+        if ($linear) {
+            if (!empty($post['linear_api_key'])) {
+                $linear->set_api_key($post['linear_api_key']);
+            }
+
+            if (!empty($post['linear_webhook_secret'])) {
+                $linear->set_webhook_secret($post['linear_webhook_secret']);
+            }
+
+            if (!empty($post['linear_team_id'])) {
+                $linear->set_team_id($post['linear_team_id']);
+            }
+
+            $visible = isset($post['linear_visible_states']) && is_array($post['linear_visible_states'])
+                ? array_values(array_filter(array_map('sanitize_text_field', $post['linear_visible_states'])))
+                : [];
+
+            if ($state_manager && method_exists($state_manager, 'update_state')) {
+                $state_manager->update_state('integrations_linear_visible_states', $visible);
+            }
+
+            if (!empty($post['linear_sync_now'])) {
+                $linear->sync_now();
+            }
+        }
+
+        if ($notion) {
+            if (!empty($post['notion_api_key'])) {
+                $notion->set_api_key($post['notion_api_key']);
+            }
+
+            if (!empty($post['notion_webhook_secret'])) {
+                $notion->set_webhook_secret($post['notion_webhook_secret']);
+            }
+
+            if (!empty($post['notion_projects_database_id'])) {
+                $notion->set_projects_database_id($post['notion_projects_database_id']);
+            }
+
+            $mappings = [];
+            if (isset($post['notion_db_map']) && is_array($post['notion_db_map'])) {
+                foreach ($post['notion_db_map'] as $db_id => $project_id) {
+                    $db_id = sanitize_text_field($db_id);
+                    $project_id = (int) $project_id;
+                    if ($db_id !== '' && $project_id > 0) {
+                        $mappings[$db_id] = $project_id;
+                    }
+                }
+            }
+
+            if (isset($post['notion_db_map'])) {
+                $notion->set_database_mappings($mappings);
+            }
+
+            if (!empty($post['notion_sync_now'])) {
+                $notion->sync_now();
+            }
+        }
+
+        add_action('admin_notices', function() {
+            echo '<div class="notice notice-success"><p>' . esc_html__('Integrations saved.', 'newera') . '</p></div>';
+        });
+    }
+
+    /**
+     * Render integrations page.
+     */
+    private function render_integrations_page() {
+        $linear = function_exists('newera_get_linear_manager') ? newera_get_linear_manager() : null;
+        $notion = function_exists('newera_get_notion_manager') ? newera_get_notion_manager() : null;
+        $state_manager = function_exists('newera_get_state_manager') ? newera_get_state_manager() : null;
+        $project_manager = function_exists('newera_get_project_manager') ? newera_get_project_manager() : null;
+
+        $projects = $project_manager && method_exists($project_manager, 'list_projects_for_user')
+            ? $project_manager->list_projects_for_user(get_current_user_id(), ['limit' => 200])
+            : [];
+
+        $linear_states = [];
+        $linear_teams = [];
+
+        if ($linear && method_exists($linear, 'is_configured') && $linear->is_configured()) {
+            $linear_states = $linear->fetch_workflow_states();
+            if (is_wp_error($linear_states)) {
+                $linear_states = [];
+            }
+
+            $linear_teams = $linear->fetch_teams();
+            if (is_wp_error($linear_teams)) {
+                $linear_teams = [];
+            }
+        }
+
+        $visible_states = $state_manager && method_exists($state_manager, 'get_state_value')
+            ? $state_manager->get_state_value('integrations_linear_visible_states', [])
+            : [];
+
+        if (!is_array($visible_states)) {
+            $visible_states = [];
+        }
+
+        $notion_databases = [];
+        if ($notion && method_exists($notion, 'is_configured') && $notion->is_configured()) {
+            $notion_databases = $notion->search_databases();
+            if (is_wp_error($notion_databases)) {
+                $notion_databases = [];
+            }
+        }
+
+        $notion_mappings = $notion && method_exists($notion, 'get_database_mappings')
+            ? $notion->get_database_mappings()
+            : [];
+
+        include NEWERA_PLUGIN_PATH . 'templates/admin/integrations.php';
     }
 
     /**

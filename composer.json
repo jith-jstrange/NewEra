@@ -20,6 +20,8 @@
             "Newera\\Database\\": "includes/Database/",
             "Newera\\Admin\\": "includes/Admin/",
             "Newera\\Modules\\": "includes/Modules/",
+            "Newera\\Projects\\": "includes/Projects/",
+            "Newera\\Integrations\\": "includes/Integrations/"
             "Newera\\API\\": "includes/API/",
             "Newera\\API\\REST\\": "includes/API/REST/",
             "Newera\\API\\GraphQL\\": "includes/API/GraphQL/",
