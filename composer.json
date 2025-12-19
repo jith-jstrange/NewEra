@@ -5,6 +5,10 @@
     "require-dev": {
         "phpunit/phpunit": "^9.0"
     },
+    "require": {
+        "webonyx/graphql-php": "^15.0",
+        "firebase/php-jwt": "^6.0"
+    },
     "autoload-dev": {
         "psr-4": {
             "Newera\\Tests\\": "tests/"
@@ -15,7 +19,15 @@
             "Newera\\Core\\": "includes/Core/",
             "Newera\\Database\\": "includes/Database/",
             "Newera\\Admin\\": "includes/Admin/",
-            "Newera\\Modules\\": "includes/Modules/"
+            "Newera\\Modules\\": "includes/Modules/",
+            "Newera\\API\\": "includes/API/",
+            "Newera\\API\\REST\\": "includes/API/REST/",
+            "Newera\\API\\GraphQL\\": "includes/API/GraphQL/",
+            "Newera\\API\\Auth\\": "includes/API/Auth/",
+            "Newera\\API\\Middleware\\": "includes/API/Middleware/",
+            "Newera\\API\\Webhooks\\": "includes/API/Webhooks/",
+            "Newera\\API\\Docs\\": "includes/API/Docs/",
+            "Newera\\API\\SDK\\": "includes/API/SDK/"
         }
     },
     "scripts": {
