@@ -43,3 +43,8 @@ wp-content/newera-logs/newera.log
 # Backup files
 *.bak
 *.backup
+
+# Test coverage
+coverage/
+coverage.xml
+.phpunit.result.cache

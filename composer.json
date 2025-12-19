@@ -34,9 +34,15 @@
     }
   },
   "scripts": {
-    "test": "phpunit",
-    "test-coverage": "phpunit --coverage-html coverage",
-    "test-unit": "phpunit tests/CryptoTest.php tests/StateManagerTest.php"
+    "test": "phpunit --testdox",
+    "test-coverage": "phpunit --coverage-html coverage --coverage-text",
+    "test-unit": "phpunit tests/CryptoTest.php tests/StateManagerTest.php",
+    "test-rest": "phpunit tests/RESTControllerTest.php --testdox",
+    "test-auth": "phpunit tests/AuthManagerTest.php --testdox",
+    "test-middleware": "phpunit tests/MiddlewareManagerTest.php --testdox",
+    "test-webhooks": "phpunit tests/WebhookManagerTest.php --testdox",
+    "test-graphql": "phpunit tests/GraphQLControllerTest.php --testdox",
+    "test-api": "phpunit tests/RESTControllerTest.php tests/GraphQLControllerTest.php tests/AuthManagerTest.php tests/MiddlewareManagerTest.php tests/WebhookManagerTest.php --testdox"
   },
   "config": {
     "sort-packages": true
