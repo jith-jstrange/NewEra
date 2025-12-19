@@ -12,6 +12,7 @@
     <testsuites>
         <testsuite name="Newera Plugin Test Suite">
             <directory suffix="Test.php">tests</directory>
+            <directory suffix="IntegrationTest.php">tests/Integration</directory>
         </testsuite>
     </testsuites>
     
