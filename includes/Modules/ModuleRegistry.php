@@ -52,7 +52,15 @@ class ModuleRegistry {
         } elseif (defined('NEWERA_MODULES_PATH')) {
             $this->modules_path = NEWERA_MODULES_PATH;
         } else {
-            $this->modules_path = trailingslashit(NEWERA_PLUGIN_PATH . 'modules');
+            // Check both includes/Modules and modules directories
+            $includes_modules_path = trailingslashit(NEWERA_PLUGIN_PATH . 'includes/Modules');
+            $modules_path = trailingslashit(NEWERA_PLUGIN_PATH . 'modules');
+            
+            if (is_dir($includes_modules_path)) {
+                $this->modules_path = $includes_modules_path;
+            } else {
+                $this->modules_path = $modules_path;
+            }
         }
     }
 
@@ -228,6 +236,11 @@ class ModuleRegistry {
 
         $relative = preg_replace('/\.php$/i', '', $relative);
         $relative = str_replace('/', '\\', $relative);
+
+        // Handle both includes/Modules/Payments/StripeManager.php and includes/Modules/Payments/StripePaymentsModule.php
+        if (strpos($relative, 'Modules\\Payments') !== false) {
+            return '\\Newera\\Modules\\Payments\\' . basename($relative);
+        }
 
         return '\\Newera\\Modules\\' . $relative;
     }

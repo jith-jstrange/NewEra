@@ -35,6 +35,8 @@ class CreateSubscriptionsTable {
             start_date date,
             end_date date,
             auto_renew tinyint(1) DEFAULT 1,
+            stripe_subscription_id varchar(255),
+            stripe_customer_id varchar(255),
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             deleted_at datetime NULL,
@@ -42,6 +44,8 @@ class CreateSubscriptionsTable {
             KEY client_id (client_id),
             KEY status (status),
             KEY plan (plan),
+            KEY stripe_subscription_id (stripe_subscription_id),
+            KEY stripe_customer_id (stripe_customer_id),
             KEY created_at (created_at)
         ) $charset_collate;";
 

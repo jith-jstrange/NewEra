@@ -365,6 +365,12 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
                             </tr>
                             <?php endif; ?>
                         <?php elseif ($current_step === 'payments') : ?>
+                            <?php
+                            $provider = $saved_current['provider'] ?? '';
+                            $stripe_key = $saved_current['stripe_key'] ?? '';
+                            $stripe_secret = $saved_current['stripe_secret'] ?? '';
+                            $default_currency = $saved_current['default_currency'] ?? 'usd';
+                            ?>
                             <tr>
                                 <th scope="row">
                                     <label for="provider"><?php _e('Payments Provider', 'newera'); ?></label>
@@ -372,18 +378,16 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
                                 <td>
                                     <select id="provider" name="provider">
                                         <?php
-                                        $provider_value = $saved_current['provider'] ?? '';
                                         $providers = [
                                             '' => __('Select…', 'newera'),
                                             'stripe' => 'Stripe',
-                                            'paypal' => 'PayPal',
                                             'manual' => __('Manual / Offline', 'newera'),
                                         ];
                                         foreach ($providers as $value => $label) {
                                             printf(
                                                 '<option value="%s" %s>%s</option>',
                                                 esc_attr($value),
-                                                selected($provider_value, $value, false),
+                                                selected($provider, $value, false),
                                                 esc_html($label)
                                             );
                                         }
@@ -391,6 +395,60 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
                                     </select>
                                 </td>
                             </tr>
+                            
+                            <tr class="stripe-fields" style="<?php echo $provider === 'stripe' ? '' : 'display:none;'; ?>">
+                                <th scope="row">
+                                    <label for="stripe_key"><?php _e('Stripe Publishable Key', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="text" id="stripe_key" name="stripe_key" value="<?php echo esc_attr($stripe_key); ?>" class="regular-text" placeholder="pk_live_... or pk_test_..." />
+                                    <p class="description"><?php _e('Your Stripe publishable key. Use test keys (pk_test_) for development.', 'newera'); ?></p>
+                                </td>
+                            </tr>
+                            
+                            <tr class="stripe-fields" style="<?php echo $provider === 'stripe' ? '' : 'display:none;'; ?>">
+                                <th scope="row">
+                                    <label for="stripe_secret"><?php _e('Stripe Secret Key', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="password" id="stripe_secret" name="stripe_secret" value="<?php echo esc_attr($stripe_secret); ?>" class="regular-text" autocomplete="off" placeholder="sk_live_... or sk_test_..." />
+                                    <p class="description"><?php _e('Your Stripe secret key. This will be encrypted and stored securely.', 'newera'); ?></p>
+                                </td>
+                            </tr>
+                            
+                            <tr class="stripe-fields" style="<?php echo $provider === 'stripe' ? '' : 'display:none;'; ?>">
+                                <th scope="row">
+                                    <label for="default_currency"><?php _e('Default Currency', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <select id="default_currency" name="default_currency">
+                                        <?php
+                                        $currencies = [
+                                            'usd' => 'USD',
+                                            'eur' => 'EUR',
+                                            'gbp' => 'GBP',
+                                            'cad' => 'CAD'
+                                        ];
+                                        foreach ($currencies as $code => $name) {
+                                            printf(
+                                                '<option value="%s" %s>%s</option>',
+                                                esc_attr($code),
+                                                selected($default_currency, $code, false),
+                                                esc_html($name)
+                                            );
+                                        }
+                                        ?>
+                                    </select>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <th scope="row">
+                                    <label for="webhook_url"><?php _e('Webhook URL', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="text" id="webhook_url" value="<?php echo esc_attr(home_url('/newera-stripe-webhook/')); ?>" class="regular-text" readonly />
+                                    <p class="description"><?php _e('This URL will be automatically configured as your Stripe webhook endpoint.', 'newera'); ?></p>
                             <tr>
                                 <th scope="row">
                                     <label for="stripe_api_key"><?php _e('Stripe API Key', 'newera'); ?></label>
@@ -663,6 +721,22 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
 </div>
 
 <script>
+// Show/hide Stripe fields based on provider selection
+document.addEventListener('DOMContentLoaded', function() {
+    var providerSelect = document.getElementById('provider');
+    var stripeFields = document.querySelectorAll('.stripe-fields');
+    
+    function toggleStripeFields() {
+        var show = providerSelect.value === 'stripe';
+        stripeFields.forEach(function(field) {
+            field.style.display = show ? '' : 'none';
+        });
+    }
+    
+    if (providerSelect) {
+        providerSelect.addEventListener('change', toggleStripeFields);
+        toggleStripeFields(); // Initial state
+    }
 jQuery(document).ready(function($) {
     // Database type selector
     $('#db_type').on('change', function() {
