@@ -86,6 +86,7 @@ class SetupWizard {
 
         add_action('wp_ajax_newera_setup_wizard_save_step', [$this, 'ajax_save_step']);
         add_action('wp_ajax_newera_setup_wizard_reset', [$this, 'ajax_reset']);
+        add_action('wp_ajax_newera_test_db_connection', [$this, 'ajax_test_db_connection']);
     }
 
     /**
@@ -295,6 +296,37 @@ class SetupWizard {
             'redirect_url' => $this->get_wizard_url(),
             'state' => $this->get_wizard_state(),
         ]);
+    }
+
+    /**
+     * AJAX handler for testing database connection
+     */
+    public function ajax_test_db_connection() {
+        check_ajax_referer('newera_setup_wizard_ajax', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions.', 'newera'), 403);
+        }
+
+        $connection_string = isset($_POST['connection_string']) ? sanitize_text_field(wp_unslash($_POST['connection_string'])) : '';
+
+        if (empty($connection_string)) {
+            wp_send_json_error(__('Connection string is required.', 'newera'), 400);
+        }
+
+        $db_factory = apply_filters('newera_get_db_factory', null);
+        
+        if (!$db_factory) {
+            wp_send_json_error(__('Database factory not available.', 'newera'), 500);
+        }
+
+        $result = $db_factory->test_connection($connection_string);
+
+        if ($result['success']) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error($result['message'], 400);
+        }
     }
 
     /**
@@ -534,7 +566,22 @@ class SetupWizard {
                 break;
 
             case 'database':
-                $sanitized['connection_name'] = isset($data['connection_name']) ? sanitize_text_field($data['connection_name']) : '';
+                $sanitized['db_type'] = isset($data['db_type']) ? sanitize_text_field($data['db_type']) : 'wordpress';
+                $sanitized['connection_string'] = isset($data['connection_string']) ? sanitize_textarea_field($data['connection_string']) : '';
+                $sanitized['table_prefix'] = isset($data['table_prefix']) ? sanitize_text_field($data['table_prefix']) : 'wp_';
+                $sanitized['persistent'] = !empty($data['persistent']);
+                
+                if ($sanitized['db_type'] === 'external' && !empty($sanitized['connection_string'])) {
+                    $db_factory = apply_filters('newera_get_db_factory', null);
+                    if ($db_factory) {
+                        $db_factory->save_configuration($sanitized);
+                        
+                        $migration_result = $db_factory->run_external_migrations();
+                        if (!$migration_result) {
+                            $sanitized['migration_warning'] = 'External database migrations may have failed. Check logs.';
+                        }
+                    }
+                }
                 break;
 
             case 'payments':
