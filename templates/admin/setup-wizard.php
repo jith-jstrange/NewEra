@@ -15,6 +15,7 @@ $current_step = $template_data['current_step'] ?? 'intro';
 $revisit = !empty($template_data['revisit']);
 $notice = $template_data['notice'] ?? null;
 $wizard_url = $template_data['wizard_url'] ?? admin_url('admin.php?page=' . \Newera\Admin\SetupWizard::PAGE_SLUG);
+$step_context = is_array($template_data['step_context'] ?? null) ? $template_data['step_context'] : [];
 
 $step_ids = array_keys($steps);
 $progress_step = $wizard_state['current_step'] ?? 'intro';
@@ -64,7 +65,7 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
     <?php endif; ?>
 
     <p class="description">
-        <?php _e('This is a minimal setup wizard scaffold. Each step saves dummy data into wp_options so the wizard can be resumed.', 'newera'); ?>
+        <?php _e('This is a minimal setup wizard scaffold. Sensitive values (like OAuth client secrets) are stored encrypted and are not kept in the wizard state.', 'newera'); ?>
     </p>
 
     <h2 class="nav-tab-wrapper">
@@ -126,23 +127,98 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
                                 </td>
                             </tr>
                         <?php elseif ($current_step === 'auth') : ?>
+                            <?php
+                            $auth_providers = isset($step_context['providers']) && is_array($step_context['providers']) ? $step_context['providers'] : [];
+                            $enabled_providers = $saved_current['providers_enabled'] ?? ($step_context['enabled_providers'] ?? []);
+                            $enabled_providers = is_array($enabled_providers) ? $enabled_providers : [];
+                            ?>
+
                             <tr>
                                 <th scope="row">
-                                    <label for="api_key"><?php _e('API Key', 'newera'); ?></label>
+                                    <?php _e('Providers', 'newera'); ?>
                                 </th>
                                 <td>
-                                    <input type="text" id="api_key" name="api_key" value="<?php echo esc_attr($saved_current['api_key'] ?? ''); ?>" class="regular-text" />
-                                    <p class="description"><?php _e('Placeholder field. For real credentials, use secure storage later.', 'newera'); ?></p>
+                                    <?php if (!empty($auth_providers)) : ?>
+                                        <?php foreach ($auth_providers as $provider_id => $provider_cfg) : ?>
+                                            <?php
+                                            $provider_id = sanitize_key($provider_id);
+                                            $label = $provider_cfg['label'] ?? ucfirst($provider_id);
+                                            ?>
+                                            <label style="display:block;margin:4px 0;">
+                                                <input type="checkbox" name="auth_providers[]" value="<?php echo esc_attr($provider_id); ?>" <?php checked(in_array($provider_id, $enabled_providers, true)); ?> />
+                                                <?php echo esc_html($label); ?>
+                                            </label>
+                                        <?php endforeach; ?>
+                                    <?php else : ?>
+                                        <p class="description">
+                                            <?php _e('Auth module not loaded yet. Save and reload this step.', 'newera'); ?>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <p class="description">
+                                        <?php _e('Select the auth providers you want to enable. OAuth secrets are stored encrypted in wp_options via StateManager secure storage.', 'newera'); ?>
+                                    </p>
                                 </td>
                             </tr>
-                            <tr>
-                                <th scope="row">
-                                    <label for="api_secret"><?php _e('API Secret', 'newera'); ?></label>
-                                </th>
-                                <td>
-                                    <input type="password" id="api_secret" name="api_secret" value="<?php echo esc_attr($saved_current['api_secret'] ?? ''); ?>" class="regular-text" autocomplete="off" />
-                                </td>
-                            </tr>
+
+                            <?php if (!empty($auth_providers)) : ?>
+                                <?php foreach ($auth_providers as $provider_id => $provider_cfg) : ?>
+                                    <?php
+                                    $provider_id = sanitize_key($provider_id);
+                                    $requires_credentials = !empty($provider_cfg['requires_credentials']);
+                                    $redirect_uri = $provider_cfg['redirect_uri'] ?? '';
+                                    $has_client_id = !empty($provider_cfg['has_client_id']);
+                                    $has_client_secret = !empty($provider_cfg['has_client_secret']);
+
+                                    if (!$requires_credentials) {
+                                        continue;
+                                    }
+                                    ?>
+                                    <tr>
+                                        <th scope="row">
+                                            <?php echo esc_html($provider_cfg['label'] ?? ucfirst($provider_id)); ?>
+                                        </th>
+                                        <td>
+                                            <?php if ($redirect_uri) : ?>
+                                                <p>
+                                                    <strong><?php _e('Redirect URL', 'newera'); ?>:</strong>
+                                                    <code><?php echo esc_html($redirect_uri); ?></code>
+                                                </p>
+                                            <?php endif; ?>
+
+                                            <p>
+                                                <label for="<?php echo esc_attr($provider_id); ?>_client_id" style="display:block;font-weight:600;">
+                                                    <?php _e('Client ID', 'newera'); ?>
+                                                    <?php if ($has_client_id) : ?>
+                                                        <span class="newera-badge newera-badge-green" style="margin-left:8px;vertical-align:middle;">
+                                                            <?php _e('Stored', 'newera'); ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </label>
+                                                <input type="text" id="<?php echo esc_attr($provider_id); ?>_client_id" name="<?php echo esc_attr($provider_id); ?>_client_id" value="" class="regular-text" autocomplete="off" />
+                                                <span class="description" style="display:block;">
+                                                    <?php _e('Paste your OAuth Client ID. Leave empty to keep the currently stored value.', 'newera'); ?>
+                                                </span>
+                                            </p>
+
+                                            <p>
+                                                <label for="<?php echo esc_attr($provider_id); ?>_client_secret" style="display:block;font-weight:600;">
+                                                    <?php _e('Client Secret', 'newera'); ?>
+                                                    <?php if ($has_client_secret) : ?>
+                                                        <span class="newera-badge newera-badge-green" style="margin-left:8px;vertical-align:middle;">
+                                                            <?php _e('Stored', 'newera'); ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </label>
+                                                <input type="password" id="<?php echo esc_attr($provider_id); ?>_client_secret" name="<?php echo esc_attr($provider_id); ?>_client_secret" value="" class="regular-text" autocomplete="new-password" />
+                                                <span class="description" style="display:block;">
+                                                    <?php _e('Paste your OAuth Client Secret. Leave empty to keep the currently stored value.', 'newera'); ?>
+                                                </span>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         <?php elseif ($current_step === 'database') : ?>
                             <tr>
                                 <th scope="row">

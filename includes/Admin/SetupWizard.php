@@ -55,8 +55,8 @@ class SetupWizard {
                 'description' => __('Welcome to Newera. This wizard will guide you through a basic configuration.', 'newera'),
             ],
             'auth' => [
-                'title' => __('Auth', 'newera'),
-                'description' => __('Placeholder authentication step (e.g. API keys).', 'newera'),
+                'title' => __('Authentication', 'newera'),
+                'description' => __('Configure Better-Auth providers and store OAuth credentials securely.', 'newera'),
             ],
             'database' => [
                 'title' => __('Database', 'newera'),
@@ -189,6 +189,10 @@ class SetupWizard {
             $current_step = $wizard_state['current_step'] ?? 'intro';
         }
 
+        $step_context = function_exists('apply_filters')
+            ? apply_filters('newera_setup_wizard_step_context', [], $current_step, $this->state_manager)
+            : [];
+
         $template_data = [
             'steps' => $this->steps,
             'wizard_state' => $wizard_state,
@@ -196,6 +200,7 @@ class SetupWizard {
             'revisit' => $revisit,
             'notice' => $notice,
             'wizard_url' => $this->get_wizard_url(),
+            'step_context' => is_array($step_context) ? $step_context : [],
         ];
 
         include NEWERA_PLUGIN_PATH . 'templates/admin/setup-wizard.php';
@@ -302,7 +307,13 @@ class SetupWizard {
     private function save_step($step, $data) {
         $wizard_state = $this->get_wizard_state();
 
-        $wizard_state['data'][$step] = $this->sanitize_step_data($step, $data);
+        $sanitized = $this->sanitize_step_data($step, $data);
+
+        if (function_exists('do_action')) {
+            do_action('newera_setup_wizard_step_before_store', $step, $sanitized, $this->state_manager);
+        }
+
+        $wizard_state['data'][$step] = $this->mask_sensitive_step_data($step, $sanitized);
 
         if (!in_array($step, $wizard_state['completed_steps'], true)) {
             $wizard_state['completed_steps'][] = $step;
@@ -490,6 +501,9 @@ class SetupWizard {
     /**
      * Sanitize step-specific data.
      *
+     * Note: any sensitive values must be stored elsewhere (e.g. encrypted secure
+     * storage) and MUST NOT be persisted into the wizard state in wp_options.
+     *
      * @param string $step Step id.
      * @param array $data Data.
      * @return array
@@ -499,8 +513,24 @@ class SetupWizard {
 
         switch ($step) {
             case 'auth':
-                $sanitized['api_key'] = isset($data['api_key']) ? sanitize_text_field($data['api_key']) : '';
-                $sanitized['api_secret'] = isset($data['api_secret']) ? sanitize_text_field($data['api_secret']) : '';
+                $supported_providers = ['email', 'magic_link', 'google', 'apple', 'github'];
+
+                $selected = isset($data['auth_providers']) && is_array($data['auth_providers']) ? $data['auth_providers'] : [];
+                $selected = array_values(array_filter(array_map('sanitize_key', $selected)));
+                $selected = array_values(array_intersect($selected, $supported_providers));
+
+                $providers = [];
+                foreach ($supported_providers as $provider) {
+                    $providers[$provider] = [
+                        'client_id' => isset($data[$provider . '_client_id']) ? sanitize_text_field($data[$provider . '_client_id']) : '',
+                        'client_secret' => isset($data[$provider . '_client_secret']) ? sanitize_text_field($data[$provider . '_client_secret']) : '',
+                    ];
+                }
+
+                $sanitized = [
+                    'providers_enabled' => $selected,
+                    'providers' => $providers,
+                ];
                 break;
 
             case 'database':
@@ -526,5 +556,38 @@ class SetupWizard {
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Mask (remove) sensitive data before persisting wizard state.
+     *
+     * @param string $step Step id.
+     * @param array $data Sanitized step data.
+     * @return array
+     */
+    private function mask_sensitive_step_data($step, $data) {
+        if ($step !== 'auth' || !is_array($data)) {
+            return $data;
+        }
+
+        $masked = [
+            'providers_enabled' => isset($data['providers_enabled']) && is_array($data['providers_enabled']) ? $data['providers_enabled'] : [],
+            'providers' => [],
+        ];
+
+        if (isset($data['providers']) && is_array($data['providers'])) {
+            foreach ($data['providers'] as $provider => $provider_data) {
+                $client_id = isset($provider_data['client_id']) ? (string) $provider_data['client_id'] : '';
+                $client_secret = isset($provider_data['client_secret']) ? (string) $provider_data['client_secret'] : '';
+
+                $masked['providers'][sanitize_key($provider)] = [
+                    'client_id_last4' => $client_id !== '' ? substr($client_id, -4) : '',
+                    'client_id_provided' => $client_id !== '',
+                    'client_secret_provided' => $client_secret !== '',
+                ];
+            }
+        }
+
+        return $masked;
     }
 }
