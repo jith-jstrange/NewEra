@@ -88,8 +88,9 @@ namespace {
     }
 }
 
-namespace Newera\Tests {
+namespace Newera\Tests\Unit {
 
+    use Newera\Tests\TestCase;
     use Newera\AI\CommandHandler;
     use Newera\Core\Logger;
     use Newera\Core\StateManager;
