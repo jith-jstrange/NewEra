@@ -126,6 +126,26 @@ class DatabaseModule extends BaseModule {
     }
 
     /**
+     * Switch Database to Neon
+     * 
+     * @param array $params
+     * @return array
+     * @throws \Exception
+     */
+    public function switchDatabaseToNeon($params) {
+        $connection_string = $params['connection_string'] ?? '';
+        
+        if (empty($connection_string)) {
+            throw new \Exception('Connection string is required');
+        }
+        
+        $this->update_setting('db_provider', 'neon');
+        $this->set_credential('connection_string', $connection_string);
+        
+        return ['message' => 'Database switched to Neon successfully'];
+    }
+
+    /**
      * Register hooks only when active.
      */
     public function registerHooks() {

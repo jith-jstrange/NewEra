@@ -257,4 +257,29 @@ abstract class BaseModule implements ModuleInterface {
 
         return $this->state_manager->update_setting('modules', $modules);
     }
+
+    /**
+     * Get a specific setting for this module
+     * 
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    protected function get_setting($key, $default = null) {
+        $settings = $this->get_module_settings();
+        return isset($settings[$key]) ? $settings[$key] : $default;
+    }
+
+    /**
+     * Update a specific setting for this module
+     * 
+     * @param string $key
+     * @param mixed $value
+     * @return bool
+     */
+    protected function update_setting($key, $value) {
+        $settings = $this->get_module_settings();
+        $settings[$key] = $value;
+        return $this->update_module_settings($settings);
+    }
 }

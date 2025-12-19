@@ -96,6 +96,100 @@ if (!defined('ABSPATH')) {
         </table>
     </div>
 
+    <!-- Database Health Section -->
+    <div class="newera-section">
+        <h2><?php _e('Database Health', 'newera'); ?></h2>
+        
+        <?php if (!empty($db_health['available'])): ?>
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th><?php _e('Metric', 'newera'); ?></th>
+                        <th><?php _e('Value', 'newera'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong><?php _e('Adapter Type', 'newera'); ?></strong></td>
+                        <td>
+                            <?php if ($db_health['adapter_type'] === 'external'): ?>
+                                <span class="newera-badge newera-badge-blue"><?php _e('External Database', 'newera'); ?></span>
+                            <?php else: ?>
+                                <span class="newera-badge newera-badge-gray"><?php _e('WordPress Database', 'newera'); ?></span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong><?php _e('Connection Status', 'newera'); ?></strong></td>
+                        <td>
+                            <?php if ($db_health['connected']): ?>
+                                <span class="newera-badge newera-badge-green">✓ <?php _e('Connected', 'newera'); ?></span>
+                            <?php else: ?>
+                                <span class="newera-badge newera-badge-red">✗ <?php _e('Disconnected', 'newera'); ?></span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php if (!empty($db_health['fallback_active'])): ?>
+                    <tr>
+                        <td><strong><?php _e('Fallback Status', 'newera'); ?></strong></td>
+                        <td>
+                            <span class="newera-badge newera-badge-yellow">⚠ <?php _e('Fallback Active', 'newera'); ?></span>
+                            <p class="description"><?php _e('External database connection failed. Using WordPress database as fallback.', 'newera'); ?></p>
+                        </td>
+                    </tr>
+                    <?php endif; ?>
+                    <tr>
+                        <td><strong><?php _e('Health Status', 'newera'); ?></strong></td>
+                        <td>
+                            <?php if ($db_health['health_status'] === 'healthy'): ?>
+                                <?php echo $dashboard->get_health_status_badge('ok'); ?>
+                            <?php else: ?>
+                                <?php echo $dashboard->get_health_status_badge('error'); ?>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php if (!empty($db_health['connection_details'])): ?>
+                        <?php $details = $db_health['connection_details']; ?>
+                        <?php if (isset($details['driver'])): ?>
+                        <tr>
+                            <td><strong><?php _e('Driver', 'newera'); ?></strong></td>
+                            <td><?php echo esc_html($details['driver']); ?></td>
+                        </tr>
+                        <?php endif; ?>
+                        <?php if (isset($details['host'])): ?>
+                        <tr>
+                            <td><strong><?php _e('Host', 'newera'); ?></strong></td>
+                            <td><?php echo esc_html($details['host']); ?></td>
+                        </tr>
+                        <?php endif; ?>
+                        <?php if (isset($details['database'])): ?>
+                        <tr>
+                            <td><strong><?php _e('Database', 'newera'); ?></strong></td>
+                            <td><?php echo esc_html($details['database']); ?></td>
+                        </tr>
+                        <?php endif; ?>
+                        <?php if (isset($details['version'])): ?>
+                        <tr>
+                            <td><strong><?php _e('Version', 'newera'); ?></strong></td>
+                            <td><?php echo esc_html($details['version']); ?></td>
+                        </tr>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                    <?php if (!empty($db_health['last_check'])): ?>
+                    <tr>
+                        <td><strong><?php _e('Last Health Check', 'newera'); ?></strong></td>
+                        <td><?php echo esc_html($db_health['last_check']); ?></td>
+                    </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        <?php else: ?>
+            <div class="notice notice-warning inline">
+                <p><?php echo esc_html($db_health['message'] ?? __('Database health information not available.', 'newera')); ?></p>
+            </div>
+        <?php endif; ?>
+    </div>
+
     <!-- Modules Status Section -->
     <div class="newera-section">
         <h2><?php _e('Modules Status', 'newera'); ?></h2>
