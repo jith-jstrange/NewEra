@@ -35,8 +35,11 @@
   },
   "scripts": {
     "test": "phpunit",
-    "test-coverage": "phpunit --coverage-html coverage",
-    "test-unit": "phpunit tests/CryptoTest.php tests/StateManagerTest.php"
+    "test-coverage": "phpunit --coverage-html coverage --coverage-text=coverage.txt --coverage-clover coverage.xml",
+    "test-unit": "phpunit tests/CryptoTest.php tests/StateManagerTest.php",
+    "test-core": "phpunit tests/CryptoTest.php tests/StateManagerTest.php tests/BootstrapTest.php",
+    "test-database": "phpunit tests/WPDBAdapterTest.php",
+    "test-modules": "phpunit tests/BaseModuleTest.php tests/ModuleRegistryTest.php"
   },
   "config": {
     "sort-packages": true

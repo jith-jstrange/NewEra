@@ -279,4 +279,160 @@ class StateManagerTest extends TestCase {
         $this->assertIsObject($retrieved['object']);
         $this->assertEquals('value', $retrieved['object']->property);
     }
+    
+    /**
+     * Test get state returns default state
+     */
+    public function testGetStateReturnsDefaultState() {
+        $state = $this->stateManager->get_state();
+        
+        $this->assertIsArray($state);
+        $this->assertArrayHasKey('version', $state);
+        $this->assertArrayHasKey('activated', $state);
+        $this->assertArrayHasKey('setup_wizard', $state);
+    }
+    
+    /**
+     * Test update state
+     */
+    public function testUpdateState() {
+        $result = $this->stateManager->update_state('test_key', 'test_value');
+        
+        $this->assertTrue($result);
+        $this->assertEquals('test_value', $this->stateManager->get_state_value('test_key'));
+    }
+    
+    /**
+     * Test get state value with default
+     */
+    public function testGetStateValueWithDefault() {
+        $default = 'default_value';
+        $value = $this->stateManager->get_state_value('nonexistent_key', $default);
+        
+        $this->assertEquals($default, $value);
+    }
+    
+    /**
+     * Test set state value
+     */
+    public function testSetStateValue() {
+        $result = $this->stateManager->set_state_value('test_key', 'test_value');
+        
+        $this->assertTrue($result);
+        $this->assertEquals('test_value', $this->stateManager->get_state_value('test_key'));
+    }
+    
+    /**
+     * Test get settings
+     */
+    public function testGetSettings() {
+        $settings = $this->stateManager->get_settings();
+        
+        $this->assertIsArray($settings);
+    }
+    
+    /**
+     * Test get setting with default
+     */
+    public function testGetSettingWithDefault() {
+        $default = 'default_value';
+        $value = $this->stateManager->get_setting('nonexistent_key', $default);
+        
+        $this->assertEquals($default, $value);
+    }
+    
+    /**
+     * Test update setting
+     */
+    public function testUpdateSetting() {
+        $result = $this->stateManager->update_setting('test_setting', 'test_value');
+        
+        $this->assertTrue($result);
+        $this->assertEquals('test_value', $this->stateManager->get_setting('test_setting'));
+    }
+    
+    /**
+     * Test is activated
+     */
+    public function testIsActivated() {
+        $this->assertIsBool($this->stateManager->is_activated());
+    }
+    
+    /**
+     * Test mark as activated
+     */
+    public function testMarkAsActivated() {
+        $result = $this->stateManager->mark_as_activated();
+        
+        $this->assertTrue($result);
+        $this->assertTrue($this->stateManager->is_activated());
+    }
+    
+    /**
+     * Test reset state
+     */
+    public function testResetState() {
+        $this->stateManager->update_state('test_key', 'test_value');
+        
+        $result = $this->stateManager->reset_state();
+        
+        $this->assertTrue($result);
+        $this->assertNull($this->stateManager->get_state_value('test_key'));
+    }
+    
+    /**
+     * Test get health info
+     */
+    public function testGetHealthInfo() {
+        $health = $this->stateManager->get_health_info();
+        
+        $this->assertIsArray($health);
+    }
+    
+    /**
+     * Test update health info
+     */
+    public function testUpdateHealthInfo() {
+        $issues = ['issue1', 'issue2'];
+        $result = $this->stateManager->update_health_info('warning', $issues);
+        
+        $this->assertTrue($result);
+        
+        $health = $this->stateManager->get_health_info();
+        $this->assertEquals('warning', $health['status']);
+        $this->assertEquals($issues, $health['issues']);
+    }
+    
+    /**
+     * Test get crypto instance
+     */
+    public function testGetCrypto() {
+        $crypto = $this->stateManager->get_crypto();
+        
+        $this->assertInstanceOf(\Newera\Core\Crypto::class, $crypto);
+    }
+    
+    /**
+     * Test getAllSecure method
+     */
+    public function testGetAllSecure() {
+        $module = 'test_module';
+        
+        $this->stateManager->setSecure($module, 'key1', 'value1');
+        $this->stateManager->setSecure($module, 'key2', 'value2');
+        
+        $all = $this->stateManager->getAllSecure($module);
+        
+        $this->assertIsArray($all);
+    }
+    
+    /**
+     * Test init method
+     */
+    public function testInit() {
+        $this->stateManager->init();
+        
+        // Should not throw any errors
+        $this->assertTrue(true);
+    }
 }

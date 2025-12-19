@@ -226,4 +226,155 @@ class CryptoTest extends TestCase {
         
         $this->assertFalse($this->crypto->decrypt($corrupted));
     }
+    
+    /**
+     * Test IV length validation
+     */
+    public function testIVLengthValidation() {
+        $data = 'test data';
+        $encrypted = $this->crypto->encrypt($data);
+        
+        // Corrupt IV with wrong length
+        $corrupted = $encrypted;
+        $corrupted['iv'] = base64_encode('short');
+        
+        $this->assertFalse($this->crypto->decrypt($corrupted));
+    }
+    
+    /**
+     * Test encryption with boolean true
+     */
+    public function testEncryptBooleanTrue() {
+        $data = true;
+        $encrypted = $this->crypto->encrypt($data);
+        
+        // true is a valid value, should encrypt
+        $this->assertIsArray($encrypted);
+        $decrypted = $this->crypto->decrypt($encrypted);
+        $this->assertTrue($decrypted);
+    }
+    
+    /**
+     * Test encryption with zero
+     */
+    public function testEncryptZero() {
+        $data = 0;
+        $encrypted = $this->crypto->encrypt($data);
+        
+        // Zero is a valid value
+        $this->assertIsArray($encrypted);
+        $decrypted = $this->crypto->decrypt($encrypted);
+        $this->assertEquals(0, $decrypted);
+    }
+    
+    /**
+     * Test get metadata with non-array input
+     */
+    public function testGetMetadataWithNonArray() {
+        $metadata = $this->crypto->get_metadata('not an array');
+        
+        $this->assertIsArray($metadata);
+        $this->assertEmpty($metadata);
+    }
+    
+    /**
+     * Test get metadata with missing fields
+     */
+    public function testGetMetadataWithMissingFields() {
+        $partial_encrypted = [
+            'iv' => base64_encode('1234567890123456'),
+        ];
+        
+        $metadata = $this->crypto->get_metadata($partial_encrypted);
+        
+        $this->assertIsArray($metadata);
+        $this->assertArrayHasKey('version', $metadata);
+        $this->assertArrayHasKey('timestamp', $metadata);
+        $this->assertEquals('unknown', $metadata['version']);
+        $this->assertNull($metadata['timestamp']);
+    }
+    
+    /**
+     * Test encryption produces valid base64 IV
+     */
+    public function testEncryptionProducesValidBase64IV() {
+        $data = 'test data';
+        $encrypted = $this->crypto->encrypt($data);
+        
+        $this->assertIsArray($encrypted);
+        $this->assertArrayHasKey('iv', $encrypted);
+        
+        // Verify IV is valid base64
+        $decoded_iv = base64_decode($encrypted['iv'], true);
+        $this->assertNotFalse($decoded_iv);
+        
+        // Verify IV has correct length
+        $this->assertEquals(16, strlen($decoded_iv));
+    }
+    
+    /**
+     * Test encryption produces valid base64 data
+     */
+    public function testEncryptionProducesValidBase64Data() {
+        $data = 'test data';
+        $encrypted = $this->crypto->encrypt($data);
+        
+        $this->assertIsArray($encrypted);
+        $this->assertArrayHasKey('data', $encrypted);
+        
+        // Verify data is valid base64
+        $decoded_data = base64_decode($encrypted['data'], true);
+        $this->assertNotFalse($decoded_data);
+    }
+    
+    /**
+     * Test encryption includes version and timestamp
+     */
+    public function testEncryptionIncludesVersionAndTimestamp() {
+        $data = 'test data';
+        $encrypted = $this->crypto->encrypt($data);
+        
+        $this->assertArrayHasKey('version', $encrypted);
+        $this->assertArrayHasKey('timestamp', $encrypted);
+        $this->assertEquals('1.0', $encrypted['version']);
+        $this->assertIsInt($encrypted['timestamp']);
+        $this->assertGreaterThan(0, $encrypted['timestamp']);
+    }
+    
+    /**
+     * Test very long string encryption
+     */
+    public function testVeryLongStringEncryption() {
+        $data = str_repeat('A very long string for testing. ', 10000);
+        
+        $encrypted = $this->crypto->encrypt($data);
+        $this->assertIsArray($encrypted);
+        
+        $decrypted = $this->crypto->decrypt($encrypted);
+        $this->assertEquals($data, $decrypted);
+    }
+    
+    /**
+     * Test deeply nested array encryption
+     */
+    public function testDeeplyNestedArrayEncryption() {
+        $data = [
+            'level1' => [
+                'level2' => [
+                    'level3' => [
+                        'level4' => [
+                            'level5' => 'deep value'
+                        ]
+                    ]
+                ]
+            ]
+        ];
+        
+        $encrypted = $this->crypto->encrypt($data);
+        $this->assertIsArray($encrypted);
+        
+        $decrypted = $this->crypto->decrypt($encrypted);
+        $this->assertEquals($data, $decrypted);
+        $this->assertEquals('deep value', $decrypted['level1']['level2']['level3']['level4']['level5']);
+    }
 }

@@ -90,8 +90,70 @@ if (!function_exists('current_time')) {
     }
 }
 
+if (!function_exists('is_admin')) {
+    function is_admin() {
+        return false;
+    }
+}
+
+if (!function_exists('add_action')) {
+    function add_action($hook, $callback, $priority = 10, $args = 1) {
+        return true;
+    }
+}
+
+if (!function_exists('add_filter')) {
+    function add_filter($hook, $callback, $priority = 10, $args = 1) {
+        return true;
+    }
+}
+
+if (!function_exists('apply_filters')) {
+    function apply_filters($hook, $value, ...$args) {
+        return $value;
+    }
+}
+
+if (!function_exists('do_action')) {
+    function do_action($hook, ...$args) {
+        return null;
+    }
+}
+
+if (!function_exists('get_transient')) {
+    function get_transient($key) {
+        return false;
+    }
+}
+
+if (!function_exists('delete_transient')) {
+    function delete_transient($key) {
+        return true;
+    }
+}
+
+if (!function_exists('__')) {
+    function __($text, $domain = 'default') {
+        return $text;
+    }
+}
+
+if (!function_exists('trailingslashit')) {
+    function trailingslashit($string) {
+        return rtrim($string, '/\\') . '/';
+    }
+}
+
 // Load the classes to test
 require_once __DIR__ . '/../includes/Core/Crypto.php';
 require_once __DIR__ . '/../includes/Core/StateManager.php';
+require_once __DIR__ . '/../includes/Core/Logger.php';
+require_once __DIR__ . '/../includes/Core/Bootstrap.php';
+require_once __DIR__ . '/../includes/Database/DBAdapterInterface.php';
+require_once __DIR__ . '/../includes/Database/WPDBAdapter.php';
+require_once __DIR__ . '/../includes/Modules/ModuleInterface.php';
+require_once __DIR__ . '/../includes/Modules/BaseModule.php';
+require_once __DIR__ . '/../includes/Modules/ModuleRegistry.php';
 require_once __DIR__ . '/TestCase.php';
 require_once __DIR__ . '/MockStorage.php';
+require_once __DIR__ . '/MockWPDB.php';
