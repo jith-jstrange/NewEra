@@ -1,0 +1,65 @@
+version: '3.7'
+
+services:
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: wordpress_test
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    ports:
+      - "33060:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wordpress:
+    image: wordpress:latest
+    depends_on:
+      - db
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress_test
+    volumes:
+      - .:/var/www/html/wp-content/plugins/newera
+
+  test-runner:
+    image: wordpress:cli
+    depends_on:
+      - db
+      - wordpress
+    volumes:
+      - .:/var/www/html/wp-content/plugins/newera
+    working_dir: /var/www/html/wp-content/plugins/newera
+    environment:
+      WP_DB_HOST: db
+      WP_DB_USER: wordpress
+      WP_DB_PASSWORD: wordpress
+      WP_DB_NAME: wordpress_test
+    user: root
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        # Install dependencies
+        apk add --no-cache git
+        curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+        composer install
+        
+        # Wait for database
+        echo "Waiting for database..."
+        until nc -z db 3306; do
+          sleep 1
+        done
+        
+        # Initialize test database (optional, if using WP core tests)
+        # bash bin/install-wp-tests.sh wordpress_test wordpress wordpress db latest
+        
+        # Run tests
+        vendor/bin/phpunit

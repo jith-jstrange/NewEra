@@ -3,8 +3,9 @@
  * Tests for Newera\Core\StateManager class
  */
 
-namespace Newera\Tests;
+namespace Newera\Tests\Unit;
 
+use Newera\Tests\TestCase;
 use Newera\Core\StateManager;
 
 if (!defined('ABSPATH')) {

@@ -3,8 +3,9 @@
  * Tests for Newera\Core\Crypto class
  */
 
-namespace Newera\Tests;
+namespace Newera\Tests\Unit;
 
+use Newera\Tests\TestCase;
 use Newera\Core\Crypto;
 
 if (!defined('ABSPATH')) {
