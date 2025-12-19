@@ -68,7 +68,7 @@ class SetupWizard {
             ],
             'ai' => [
                 'title' => __('AI', 'newera'),
-                'description' => __('Placeholder AI provider configuration step.', 'newera'),
+                'description' => __('Configure your AI provider (OpenAI/Anthropic), store an API key securely, and select a model.', 'newera'),
             ],
             'review' => [
                 'title' => __('Review', 'newera'),
@@ -339,6 +339,8 @@ class SetupWizard {
     private function save_step($step, $data) {
         $wizard_state = $this->get_wizard_state();
 
+        $sanitized = $this->sanitize_step_data($step, $data);
+        $wizard_state['data'][$step] = $sanitized;
         if ($step === 'auth') {
             $this->persist_integration_credentials($data);
         }
@@ -368,7 +370,73 @@ class SetupWizard {
 
         $this->state_manager->update_state(self::STATE_KEY, $wizard_state);
 
+        $this->apply_step_side_effects($step, $data, $sanitized);
+
         return $wizard_state['current_step'];
+    }
+
+    /**
+     * Apply step side effects (persist module configuration, store secure credentials, etc).
+     *
+     * @param string $step
+     * @param array $raw_data
+     * @param array $sanitized_data
+     */
+    private function apply_step_side_effects($step, $raw_data, $sanitized_data) {
+        if ($step !== 'ai') {
+            return;
+        }
+
+        if (!$this->state_manager) {
+            return;
+        }
+
+        $provider = isset($raw_data['provider']) ? sanitize_key($raw_data['provider']) : '';
+        $model = isset($raw_data['model']) ? sanitize_text_field($raw_data['model']) : '';
+
+        if ($provider === '' || $model === '') {
+            return;
+        }
+
+        $max_rpm = isset($raw_data['max_requests_per_minute']) ? (int) $raw_data['max_requests_per_minute'] : 0;
+        $monthly_tokens = isset($raw_data['monthly_token_quota']) ? (int) $raw_data['monthly_token_quota'] : 0;
+        $monthly_cost = isset($raw_data['monthly_cost_quota_usd']) ? (float) $raw_data['monthly_cost_quota_usd'] : 0;
+
+        $modules = $this->state_manager->get_setting('modules', []);
+        if (!is_array($modules)) {
+            $modules = [];
+        }
+
+        $current = isset($modules['ai']) && is_array($modules['ai']) ? $modules['ai'] : [];
+        $modules['ai'] = array_merge($current, [
+            'provider' => $provider,
+            'model' => $model,
+            'policies' => [
+                'max_requests_per_minute' => max(0, $max_rpm),
+                'monthly_token_quota' => max(0, $monthly_tokens),
+                'monthly_cost_quota_usd' => max(0, $monthly_cost),
+            ],
+        ]);
+
+        $this->state_manager->update_setting('modules', $modules);
+
+        $api_key = isset($raw_data['api_key']) ? sanitize_text_field($raw_data['api_key']) : '';
+        if ($api_key !== '') {
+            $secure_key = 'api_key_' . $provider;
+
+            if (method_exists($this->state_manager, 'hasSecure') && $this->state_manager->hasSecure('ai', $secure_key)) {
+                $this->state_manager->updateSecure('ai', $secure_key, $api_key);
+            } else {
+                $this->state_manager->setSecure('ai', $secure_key, $api_key);
+            }
+        }
+
+        $enabled = $this->state_manager->get_state_value('modules_enabled', []);
+        if (!is_array($enabled)) {
+            $enabled = [];
+        }
+        $enabled['ai'] = true;
+        $this->state_manager->update_state('modules_enabled', $enabled);
     }
 
     /**
@@ -657,8 +725,15 @@ class SetupWizard {
                 break;
 
             case 'ai':
-                $sanitized['provider'] = isset($data['provider']) ? sanitize_text_field($data['provider']) : '';
+                $sanitized['provider'] = isset($data['provider']) ? sanitize_key($data['provider']) : '';
                 $sanitized['model'] = isset($data['model']) ? sanitize_text_field($data['model']) : '';
+
+                $sanitized['max_requests_per_minute'] = isset($data['max_requests_per_minute']) ? (int) $data['max_requests_per_minute'] : 0;
+                $sanitized['monthly_token_quota'] = isset($data['monthly_token_quota']) ? (int) $data['monthly_token_quota'] : 0;
+                $sanitized['monthly_cost_quota_usd'] = isset($data['monthly_cost_quota_usd']) ? (float) $data['monthly_cost_quota_usd'] : 0;
+
+                // Do not store plaintext API keys in wizard state.
+                $sanitized['api_key_set'] = !empty($data['api_key']);
                 break;
 
             case 'intro':
