@@ -2,388 +2,186 @@
 /**
  * Bootstrap class for Newera Plugin
  *
- * This class is responsible for initializing the plugin and its components.
+ * Initializes core services (logger/state), migrations/modules, admin UI, and
+ * exposes service locators via WordPress filters.
  */
 
 namespace Newera\Core;
+
+use Newera\Admin\AdminMenu;
+use Newera\Admin\SetupWizard;
+use Newera\AI\CommandHandler;
+use Newera\Database\DBAdapterFactory;
+use Newera\Integrations\Linear\LinearManager;
+use Newera\Integrations\Notion\NotionManager;
+use Newera\Modules\ModuleRegistry;
+use Newera\Projects\ProjectManager;
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Bootstrap class
- */
 class Bootstrap {
     /**
-     * Instance of this class
-     *
      * @var Bootstrap|null
      */
     private static $instance = null;
 
     /**
-     * State Manager instance
-     *
      * @var StateManager
      */
     private $state_manager;
 
     /**
-     * Module Registry instance (auto-discovered integration modules)
-     *
-     * @var \Newera\Modules\ModuleRegistry
-     */
-    private $module_registry;
-
-    /**
-     * Logger instance
-     *
      * @var Logger
      */
     private $logger;
 
     /**
-     * Admin Menu instance
-     *
-     * @var \Newera\Admin\AdminMenu
-     */
-    private $admin_menu;
-
-    /**
-     * Setup Wizard instance
-     *
-     * @var \Newera\Admin\SetupWizard
-     */
-    private $setup_wizard;
-
-    /**
-     * AI Command Handler instance
-     *
-     * @var \Newera\AI\CommandHandler
-     */
-    private $command_handler;
-     * Project Manager instance.
-     *
-     * @var \Newera\Projects\ProjectManager
-     */
-    private $project_manager;
-
-    /**
-     * Linear integration manager.
-     *
-     * @var \Newera\Integrations\Linear\LinearManager
-     */
-    private $linear_manager;
-
-    /**
-     * Notion integration manager.
-     *
-     * @var \Newera\Integrations\Notion\NotionManager
-     */
-    private $notion_manager;
-     * API Manager instance
-     *
-     * @var \Newera\API\APIManager
-     */
-    private $api_manager;
-     * DB Adapter Factory instance
-     *
-     * @var \Newera\Database\DBAdapterFactory
+     * @var DBAdapterFactory
      */
     private $db_factory;
 
     /**
-     * Get instance of Bootstrap
-     *
+     * @var ModuleRegistry
+     */
+    private $module_registry;
+
+    /**
+     * @var AdminMenu|null
+     */
+    private $admin_menu;
+
+    /**
+     * @var SetupWizard|null
+     */
+    private $setup_wizard;
+
+    /**
+     * @var CommandHandler|null
+     */
+    private $command_handler;
+
+    /**
+     * @var ProjectManager|null
+     */
+    private $project_manager;
+
+    /**
+     * @var LinearManager|null
+     */
+    private $linear_manager;
+
+    /**
+     * @var NotionManager|null
+     */
+    private $notion_manager;
+
+    /**
      * @return Bootstrap
      */
     public static function getInstance() {
         if (self::$instance === null) {
             self::$instance = new self();
         }
+
         return self::$instance;
     }
 
-    /**
-     * Constructor
-     */
     private function __construct() {
-        // Private constructor to prevent direct instantiation
+        // Singleton.
     }
 
     /**
-     * Initialize the plugin
+     * Initialize the plugin runtime.
      */
     public function init() {
-        // Initialize components
-        $this->init_logger();
-        $this->init_state_manager();
-        $this->init_project_manager();
-        $this->init_integrations();
-        $this->init_module_registry();
-        $this->init_admin_menu();
-
-        $this->init_db_factory();
-        $this->init_module_registry();
-        $this->init_admin_menu();
-        $this->init_command_handler();
-        
-        // Initialize API Manager
-        $this->init_api_manager();
-        
-        // Boot discovered modules
-        $this->init_modules();
-
-        // Expose services to other components
-        $this->expose_state_manager();
-
-        $this->expose_services();
-        
-        // Log initialization
-        $this->logger->info('Newera plugin initialized successfully');
-
-        // Check for activation notice
-        if (get_transient('newera_activated')) {
-            add_action('admin_notices', [$this, 'activation_notice']);
-            delete_transient('newera_activated');
-        }
-    }
-
-    /**
-     * Initialize the Logger
-     */
-    private function init_logger() {
         $this->logger = new Logger();
-    }
 
-    /**
-     * Initialize the State Manager
-     */
-    private function init_state_manager() {
         $this->state_manager = new StateManager();
         $this->state_manager->init();
-    }
 
-    /**
-     * Initialize the Project Manager.
-     */
-    private function init_project_manager() {
-        if (class_exists('\\Newera\\Projects\\ProjectManager')) {
-            $this->project_manager = new \Newera\Projects\ProjectManager($this->logger);
-            $this->project_manager->init();
-        }
-    }
+        $this->db_factory = new DBAdapterFactory($this->state_manager, $this->logger);
 
-    /**
-     * Initialize integrations (Linear/Notion).
-     */
-    private function init_integrations() {
-        if (class_exists('\\Newera\\Integrations\\Linear\\LinearManager')) {
-            $this->linear_manager = new \Newera\Integrations\Linear\LinearManager($this->state_manager, $this->logger, $this->project_manager);
-            $this->linear_manager->init();
-        }
+        $this->project_manager = new ProjectManager($this->logger);
+        $this->project_manager->init();
 
-        if (class_exists('\\Newera\\Integrations\\Notion\\NotionManager')) {
-            $this->notion_manager = new \Newera\Integrations\Notion\NotionManager($this->state_manager, $this->logger, $this->project_manager);
-            $this->notion_manager->init();
-        }
-     * Initialize the DB Adapter Factory
-     */
-    private function init_db_factory() {
-        $this->db_factory = new \Newera\Database\DBAdapterFactory($this->state_manager, $this->logger);
-    }
+        $this->linear_manager = new LinearManager($this->state_manager, $this->logger, $this->project_manager);
+        $this->linear_manager->init();
 
-    /**
-     * Initialize the Module Registry
-     */
-    private function init_module_registry() {
-        $this->module_registry = new \Newera\Modules\ModuleRegistry($this->state_manager, $this->logger);
+        $this->notion_manager = new NotionManager($this->state_manager, $this->logger, $this->project_manager);
+        $this->notion_manager->init();
+
+        $this->module_registry = new ModuleRegistry($this->state_manager, $this->logger);
         $this->module_registry->init();
-    }
 
-    /**
-     * Initialize Admin Menu
-     */
-    private function init_admin_menu() {
+        $this->expose_services();
+
+        // Boot modules after services are available.
+        $this->module_registry->boot();
+
+        // Admin UI.
         if (is_admin()) {
-            $this->admin_menu = new \Newera\Admin\AdminMenu();
+            $this->admin_menu = new AdminMenu();
             $this->admin_menu->init();
 
-            $this->setup_wizard = new \Newera\Admin\SetupWizard($this->state_manager);
+            $this->setup_wizard = new SetupWizard($this->state_manager);
             $this->setup_wizard->init();
         }
-    }
 
-    /**
-     * Initialize Command Handler
-     */
-    private function init_command_handler() {
-        $this->command_handler = new \Newera\AI\CommandHandler($this->state_manager, $this->logger, $this->module_registry);
+        // AI command API.
+        $this->command_handler = new CommandHandler($this->state_manager, $this->logger, $this->module_registry);
         $this->command_handler->init();
-     * Initialize API Manager
-     */
-    private function init_api_manager() {
-        $api_manager = new \Newera\API\APIManager();
-        $api_manager->init();
-        
-        // Store API manager instance
-        $this->api_manager = $api_manager;
-        
-        $this->logger->info('API Manager initialized successfully');
+
+        $this->maybe_show_activation_notice();
+
+        $this->logger->info('Newera plugin initialized successfully');
     }
 
-    /**
-     * Boot all discovered modules
-     */
-    private function init_modules() {
-        if ($this->module_registry) {
-            $this->module_registry->boot();
+    private function maybe_show_activation_notice() {
+        if (!get_transient('newera_activated')) {
+            return;
         }
+
+        add_action('admin_notices', function() {
+            echo '<div class="notice notice-success is-dismissible"><p>';
+            echo esc_html__('Newera plugin activated successfully!', 'newera');
+            echo '</p></div>';
+        });
+
+        delete_transient('newera_activated');
     }
 
-    /**
-     * Display activation notice
-     */
-    public function activation_notice() {
-        echo '<div class="notice notice-success is-dismissible">';
-        echo '<p>' . __('Newera plugin activated successfully!', 'newera') . '</p>';
-        echo '</div>';
-    }
-
-    /**
-     * Get State Manager
-     *
-     * @return StateManager
-     */
-    public function get_state_manager() {
-        return $this->state_manager;
-    }
-
-    /**
-     * Get Module Registry
-     *
-     * @return \Newera\Modules\ModuleRegistry|null
-     */
-    public function get_modules_registry() {
-        return $this->module_registry;
-    }
-
-    /**
-     * Get Logger
-     *
-     * @return Logger
-     */
-    public function get_logger() {
-        return $this->logger;
-    }
-
-    /**
-     * Get Project Manager.
-     *
-     * @return \Newera\Projects\ProjectManager|null
-     */
-    public function get_project_manager() {
-        return $this->project_manager;
-    }
-
-    /**
-     * Get Linear manager.
-     *
-     * @return \Newera\Integrations\Linear\LinearManager|null
-     */
-    public function get_linear_manager() {
-        return $this->linear_manager;
-    }
-
-    /**
-     * Get Notion manager.
-     *
-     * @return \Newera\Integrations\Notion\NotionManager|null
-     */
-    public function get_notion_manager() {
-        return $this->notion_manager;
-     * Get DB Adapter Factory
-     *
-     * @return \Newera\Database\DBAdapterFactory
-     */
-    public function get_db_factory() {
-        return $this->db_factory;
-    }
-    
     /**
      * Expose core services to other components via filters.
      */
     private function expose_services() {
         add_filter('newera_get_state_manager', function() {
-            return $this->get_state_manager();
+            return $this->state_manager;
         });
 
         add_filter('newera_get_logger', function() {
-            return $this->get_logger();
+            return $this->logger;
         });
 
         add_filter('newera_get_module_registry', function() {
-            return $this->get_modules_registry();
+            return $this->module_registry;
         });
 
         add_filter('newera_get_project_manager', function() {
-            return $this->get_project_manager();
+            return $this->project_manager;
         });
 
         add_filter('newera_get_linear_manager', function() {
-            return $this->get_linear_manager();
+            return $this->linear_manager;
         });
 
         add_filter('newera_get_notion_manager', function() {
-            return $this->get_notion_manager();
-        add_filter('newera_get_db_factory', function() {
-            return $this->get_db_factory();
+            return $this->notion_manager;
         });
 
-        if (!function_exists('newera_get_state_manager')) {
-            function newera_get_state_manager() {
-                return apply_filters('newera_get_state_manager', null);
-            }
-        }
-
-        if (!function_exists('newera_get_logger')) {
-            function newera_get_logger() {
-                return apply_filters('newera_get_logger', null);
-            }
-        }
-
-        if (!function_exists('newera_get_module_registry')) {
-            function newera_get_module_registry() {
-                return apply_filters('newera_get_module_registry', null);
-            }
-        }
-
-        if (!function_exists('newera_get_project_manager')) {
-            function newera_get_project_manager() {
-                return apply_filters('newera_get_project_manager', null);
-            }
-        }
-
-        if (!function_exists('newera_get_linear_manager')) {
-            function newera_get_linear_manager() {
-                return apply_filters('newera_get_linear_manager', null);
-            }
-        }
-
-        if (!function_exists('newera_get_notion_manager')) {
-            function newera_get_notion_manager() {
-                return apply_filters('newera_get_notion_manager', null);
-        if (!function_exists('newera_get_db_factory')) {
-            function newera_get_db_factory() {
-                return apply_filters('newera_get_db_factory', null);
-            }
-        }
-
-        if ($this->state_manager && $this->state_manager->is_crypto_available()) {
-            $this->logger->info('Secure credential storage is available via StateManager');
-        } else {
-            $this->logger->warning('Secure credential storage is not available - crypto functions missing');
-        }
+        add_filter('newera_get_db_factory', function() {
+            return $this->db_factory;
+        });
     }
 }

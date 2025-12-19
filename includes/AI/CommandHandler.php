@@ -76,6 +76,10 @@ class CommandHandler {
         $command = $params['command'] ?? '';
         $module_name = $params['module'] ?? '';
         $cmd_params = $params['params'] ?? [];
+        $cmd_params = is_array($cmd_params) ? $cmd_params : [];
+
+        // Preserve the raw command text for modules that want to parse natural language.
+        $cmd_params['_command'] = (string) $command;
 
         $audit_log = [
             'timestamp' => current_time('mysql'),
@@ -160,18 +164,30 @@ class CommandHandler {
      * @return string
      */
     private function map_command_to_method($command) {
+        // Natural language support: treat any "create ... plan" command as plan creation.
+        if (preg_match('/\bcreate\b.+\bplan\b/i', (string) $command)) {
+            return 'createPlanFromCommand';
+        }
+
         switch ($command) {
-            case 'Enable Google Sign-In': return 'enableGoogleSignIn';
-            case 'Create a plan': return 'createPlan';
-            case 'Switch database to Neon': return 'switchDatabaseToNeon';
-            case 'Fetch Linear issues and create projects': return 'fetchLinearIssuesAndCreateProjects';
-            case 'Generate usage report': return 'generateUsageReport';
-            case 'Invite user to project': return 'inviteUserToProject';
-            case 'Set rate limit': return 'setRateLimit';
+            case 'Enable Google Sign-In':
+                return 'enableGoogleSignIn';
+            case 'Create a plan':
+                return 'createPlan';
+            case 'Switch database to Neon':
+                return 'switchDatabaseToNeon';
+            case 'Fetch Linear issues and create projects':
+                return 'fetchLinearIssuesAndCreateProjects';
+            case 'Generate usage report':
+                return 'generateUsageReport';
+            case 'Invite user to project':
+                return 'inviteUserToProject';
+            case 'Set rate limit':
+                return 'setRateLimit';
             default:
-                // CamelCase the command
-                $str = str_replace(['-', '_'], ' ', $command);
-                $str = ucwords($str);
+                // CamelCase the command (best-effort).
+                $str = preg_replace('/[^a-zA-Z0-9]+/', ' ', (string) $command);
+                $str = ucwords(trim($str));
                 $str = str_replace(' ', '', $str);
                 return lcfirst($str);
         }

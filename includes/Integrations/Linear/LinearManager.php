@@ -617,6 +617,10 @@ class LinearManager {
      * @return array|\WP_Error
      */
     public function graphql($query, $variables = []) {
+        if (function_exists('newera_is_e2e_mode') && newera_is_e2e_mode()) {
+            return $this->mock_graphql($query, $variables);
+        }
+
         $api_key = $this->get_api_key();
         if (!$api_key) {
             return new \WP_Error('newera_linear_not_configured', __('Linear integration not configured.', 'newera'));
@@ -661,6 +665,176 @@ class LinearManager {
         }
 
         return $decoded;
+    }
+
+    /**
+     * Mock GraphQL implementation for E2E mode.
+     *
+     * @param string $query
+     * @param array $variables
+     * @return array
+     */
+    private function mock_graphql($query, $variables = []) {
+        $store = $this->state_manager && method_exists($this->state_manager, 'get_state_value')
+            ? $this->state_manager->get_state_value('mock_linear', [])
+            : [];
+
+        if (!is_array($store)) {
+            $store = [];
+        }
+
+        if (empty($store['teams'])) {
+            $store['teams'] = [
+                ['id' => 'team_mock', 'name' => 'Mock Team', 'key' => 'MOCK'],
+            ];
+        }
+
+        if (empty($store['workflowStates'])) {
+            $store['workflowStates'] = [
+                ['id' => 'state_todo', 'name' => 'Todo', 'type' => 'unstarted'],
+                ['id' => 'state_done', 'name' => 'Done', 'type' => 'completed'],
+            ];
+        }
+
+        if (empty($store['issues'])) {
+            $store['issues'] = [
+                'issue_mock_1' => [
+                    'id' => 'issue_mock_1',
+                    'title' => 'Mock Issue 1',
+                    'description' => 'Seed issue for E2E tests',
+                    'url' => 'https://linear.mock/issue/issue_mock_1',
+                    'updatedAt' => gmdate('c'),
+                    'createdAt' => gmdate('c'),
+                    'state' => ['id' => 'state_todo', 'name' => 'Todo', 'type' => 'unstarted'],
+                    'comments' => ['nodes' => []],
+                ],
+            ];
+        }
+
+        if ($this->state_manager && method_exists($this->state_manager, 'update_state')) {
+            $this->state_manager->update_state('mock_linear', $store);
+        }
+
+        $q = (string) $query;
+
+        if (strpos($q, 'viewer') !== false) {
+            return [
+                'data' => [
+                    'viewer' => [
+                        'id' => 'user_mock',
+                        'name' => 'Mock User',
+                        'email' => 'mock@linear.local',
+                        'organization' => [
+                            'id' => 'org_mock',
+                            'name' => 'Mock Org',
+                            'urlKey' => 'mock',
+                        ],
+                    ],
+                ],
+            ];
+        }
+
+        if (strpos($q, 'teams') !== false) {
+            return [
+                'data' => [
+                    'teams' => [
+                        'nodes' => array_values($store['teams']),
+                    ],
+                ],
+            ];
+        }
+
+        if (strpos($q, 'workflowStates') !== false) {
+            return [
+                'data' => [
+                    'workflowStates' => [
+                        'nodes' => array_values($store['workflowStates']),
+                    ],
+                ],
+            ];
+        }
+
+        if (strpos($q, 'issueCreate') !== false) {
+            $input = isset($variables['input']) && is_array($variables['input']) ? $variables['input'] : [];
+            $id = 'issue_' . substr(md5(wp_json_encode($input) . microtime(true)), 0, 10);
+
+            $issue = [
+                'id' => $id,
+                'title' => isset($input['title']) ? (string) $input['title'] : '',
+                'description' => isset($input['description']) ? (string) $input['description'] : '',
+                'url' => 'https://linear.mock/issue/' . $id,
+                'updatedAt' => gmdate('c'),
+                'createdAt' => gmdate('c'),
+                'state' => ['id' => 'state_todo', 'name' => 'Todo', 'type' => 'unstarted'],
+                'comments' => ['nodes' => []],
+            ];
+
+            $store['issues'][$id] = $issue;
+            if ($this->state_manager && method_exists($this->state_manager, 'update_state')) {
+                $this->state_manager->update_state('mock_linear', $store);
+            }
+
+            return [
+                'data' => [
+                    'issueCreate' => [
+                        'success' => true,
+                        'issue' => $issue,
+                    ],
+                ],
+            ];
+        }
+
+        if (strpos($q, 'issueUpdate') !== false) {
+            $input = isset($variables['input']) && is_array($variables['input']) ? $variables['input'] : [];
+            $id = isset($input['id']) ? (string) $input['id'] : '';
+
+            if ($id !== '' && isset($store['issues'][$id])) {
+                if (isset($input['title'])) {
+                    $store['issues'][$id]['title'] = (string) $input['title'];
+                }
+                if (isset($input['description'])) {
+                    $store['issues'][$id]['description'] = (string) $input['description'];
+                }
+
+                $store['issues'][$id]['updatedAt'] = gmdate('c');
+
+                if ($this->state_manager && method_exists($this->state_manager, 'update_state')) {
+                    $this->state_manager->update_state('mock_linear', $store);
+                }
+            }
+
+            return [
+                'data' => [
+                    'issueUpdate' => [
+                        'success' => true,
+                        'issue' => ['id' => $id],
+                    ],
+                ],
+            ];
+        }
+
+        if (strpos($q, 'issue(') !== false) {
+            $id = isset($variables['id']) ? (string) $variables['id'] : '';
+            $issue = $id !== '' && isset($store['issues'][$id]) ? $store['issues'][$id] : null;
+
+            return [
+                'data' => [
+                    'issue' => $issue,
+                ],
+            ];
+        }
+
+        if (strpos($q, 'issues') !== false) {
+            return [
+                'data' => [
+                    'issues' => [
+                        'nodes' => array_values($store['issues']),
+                    ],
+                ],
+            ];
+        }
+
+        return ['data' => []];
     }
 
     /**

@@ -32,37 +32,22 @@ class AIModule extends BaseModule {
      */
     private $usage_tracker;
 
-    /**
-     * @return string
-     */
     public function getId() {
         return 'ai';
     }
 
-    /**
-     * @return string
-     */
     public function getName() {
         return 'AI';
     }
 
-    /**
-     * @return string
-     */
     public function getDescription() {
         return 'AI provider integration (OpenAI, Anthropic, and pluggable providers) with usage tracking and quotas.';
     }
 
-    /**
-     * @return string
-     */
     public function getType() {
         return 'ai';
     }
 
-    /**
-     * @return array
-     */
     public function getSettingsSchema() {
         return [
             'credentials' => [
@@ -90,9 +75,6 @@ class AIModule extends BaseModule {
         ];
     }
 
-    /**
-     * @return bool
-     */
     public function isConfigured() {
         $settings = $this->get_module_settings();
         $provider = isset($settings['provider']) ? sanitize_key($settings['provider']) : '';
@@ -105,39 +87,26 @@ class AIModule extends BaseModule {
         return $this->has_credential('api_key_' . $provider);
     }
 
-    /**
-     * Boot module.
-     */
     public function boot() {
         $this->registerAdminHooks();
         $this->expose_services();
         parent::boot();
     }
 
-    /**
-     * Runtime hooks when module is active.
-     */
     public function registerHooks() {
-        // Placeholder for future REST endpoints/cron, etc.
+        // Runtime hooks can be added here later.
     }
 
-    /**
-     * Admin hooks should always be available so the installer can configure AI.
-     */
     private function registerAdminHooks() {
         if (!is_admin()) {
             return;
         }
 
         add_action('admin_menu', [$this, 'register_admin_page'], 35);
-
         add_action('wp_ajax_newera_ai_list_models', [$this, 'ajax_list_models']);
         add_action('wp_ajax_newera_ai_reset_usage', [$this, 'ajax_reset_usage']);
     }
 
-    /**
-     * Expose manager via filters.
-     */
     private function expose_services() {
         add_filter('newera_get_ai_manager', function() {
             return $this->get_ai_manager();
@@ -170,9 +139,6 @@ class AIModule extends BaseModule {
         return $this->usage_tracker;
     }
 
-    /**
-     * Register Newera > AI submenu page.
-     */
     public function register_admin_page() {
         add_submenu_page(
             'newera',
@@ -184,9 +150,6 @@ class AIModule extends BaseModule {
         );
     }
 
-    /**
-     * Render and handle AI settings.
-     */
     public function render_admin_page() {
         if (!current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.', 'newera'));
@@ -238,9 +201,6 @@ class AIModule extends BaseModule {
         $monthly_tokens = isset($post['monthly_token_quota']) ? (int) $post['monthly_token_quota'] : 0;
         $monthly_cost = isset($post['monthly_cost_quota_usd']) ? (float) $post['monthly_cost_quota_usd'] : 0;
 
-        $pricing_in = isset($post['pricing_input_per_1k']) ? (float) $post['pricing_input_per_1k'] : 0;
-        $pricing_out = isset($post['pricing_output_per_1k']) ? (float) $post['pricing_output_per_1k'] : 0;
-
         $provider_config = [
             'provider' => $provider,
             'model' => $model,
@@ -251,22 +211,6 @@ class AIModule extends BaseModule {
                 'monthly_cost_quota_usd' => max(0, $monthly_cost),
             ],
         ];
-
-        if ($provider !== '' && $model !== '' && ($pricing_in > 0 || $pricing_out > 0)) {
-            $existing = $ai->get_settings();
-            $pricing = isset($existing['pricing']) && is_array($existing['pricing']) ? $existing['pricing'] : [];
-
-            if (!isset($pricing[$provider]) || !is_array($pricing[$provider])) {
-                $pricing[$provider] = [];
-            }
-
-            $pricing[$provider][$model] = [
-                'input_per_1k' => max(0, $pricing_in),
-                'output_per_1k' => max(0, $pricing_out),
-            ];
-
-            $provider_config['pricing'] = $pricing;
-        }
 
         $saved = $ai->update_settings($provider_config);
 
@@ -299,9 +243,6 @@ class AIModule extends BaseModule {
         ];
     }
 
-    /**
-     * Ensure module is enabled for the module registry.
-     */
     private function maybe_enable_module_in_state() {
         if (!$this->state_manager) {
             return;
@@ -316,9 +257,6 @@ class AIModule extends BaseModule {
         $this->state_manager->update_state('modules_enabled', $enabled);
     }
 
-    /**
-     * AJAX: list models for provider.
-     */
     public function ajax_list_models() {
         check_ajax_referer('newera_admin_nonce', 'nonce');
 
@@ -344,9 +282,6 @@ class AIModule extends BaseModule {
         ]);
     }
 
-    /**
-     * AJAX: reset usage.
-     */
     public function ajax_reset_usage() {
         check_ajax_referer('newera_admin_nonce', 'nonce');
 
@@ -382,8 +317,6 @@ namespace {
 
     if (!function_exists('newera_ai_execute')) {
         /**
-         * Execute an internal AI command via the AI command bus.
-         *
          * @param string $command_id
          * @param array $payload
          * @return mixed|\WP_Error
@@ -400,8 +333,6 @@ namespace {
 
     if (!function_exists('newera_ai_chat')) {
         /**
-         * Convenience wrapper for a chat request.
-         *
          * @param array $messages
          * @param array $options
          * @return mixed|\WP_Error
@@ -414,40 +345,5 @@ namespace {
 
             return $ai->chat($messages, $options);
         }
-    }
-class AIModule extends BaseModule {
-    public function getId() { return 'AI'; }
-    public function getName() { return 'AI'; }
-    public function getDescription() { return 'AI Module'; }
-    public function getType() { return 'ai'; }
-    public function getSettingsSchema() { return []; }
-    public function validateCredentials($credentials) { return ['valid' => true]; }
-    public function saveCredentials($credentials) { return true; }
-    public function isConfigured() { return true; }
-    public function registerHooks() {}
-    
-    /**
-     * Set rate limit
-     * 
-     * @param array $params
-     * @return array
-     * @throws \Exception
-     */
-    public function setRateLimit($params) {
-        $limit = $params['limit'] ?? 0;
-        $window = $params['window'] ?? 'hour';
-        
-        if ($limit <= 0) {
-            throw new \Exception('Limit must be greater than 0');
-        }
-        
-        $this->update_setting('rate_limit', $limit);
-        $this->update_setting('rate_window', $window);
-        
-        return [
-            'message' => "Rate limit set to $limit per $window",
-            'limit' => $limit,
-            'window' => $window
-        ];
     }
 }

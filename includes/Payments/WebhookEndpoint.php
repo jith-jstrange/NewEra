@@ -100,7 +100,15 @@ class WebhookEndpoint {
     public function handle_webhook($request) {
         try {
             $body = $request->get_body();
-            $signature = $request->get_header('stripe_signature');
+
+            // WP normalizes header names, but be defensive.
+            $signature = $request->get_header('stripe-signature');
+            if (!$signature) {
+                $signature = $request->get_header('stripe_signature');
+            }
+            if (!$signature) {
+                $signature = $request->get_header('Stripe-Signature');
+            }
 
             if (empty($body) || empty($signature)) {
                 $this->logger->warning('Webhook request missing body or signature');

@@ -2,7 +2,8 @@
 /**
  * Setup Wizard orchestrator for Newera Plugin
  *
- * Provides a minimal, multi-step onboarding wizard without requiring React/Vue.
+ * Multi-step onboarding wizard (server-rendered) that stores non-sensitive state
+ * and lets modules persist secrets via StateManager secure storage.
  */
 
 namespace Newera\Admin;
@@ -13,9 +14,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Setup Wizard class
- */
 class SetupWizard {
     /**
      * Admin page slug.
@@ -28,23 +26,17 @@ class SetupWizard {
     const STATE_KEY = 'setup_wizard';
 
     /**
-     * StateManager instance.
-     *
      * @var StateManager
      */
     private $state_manager;
 
     /**
-     * Wizard steps.
-     *
-     * @var array
+     * @var array<string,array{title:string,description:string}>
      */
     private $steps;
 
     /**
-     * Constructor.
-     *
-     * @param StateManager|null $state_manager State manager (optional).
+     * @param StateManager|null $state_manager
      */
     public function __construct($state_manager = null) {
         $this->state_manager = $state_manager instanceof StateManager ? $state_manager : new StateManager();
@@ -56,23 +48,27 @@ class SetupWizard {
             ],
             'auth' => [
                 'title' => __('Authentication', 'newera'),
-                'description' => __('Configure Better-Auth providers and store OAuth credentials securely.', 'newera'),
+                'description' => __('Choose authentication providers and store OAuth credentials securely.', 'newera'),
             ],
             'database' => [
                 'title' => __('Database', 'newera'),
-                'description' => __('Placeholder database configuration step.', 'newera'),
+                'description' => __('Choose WordPress DB or an external database and test connectivity.', 'newera'),
             ],
             'payments' => [
                 'title' => __('Payments', 'newera'),
-                'description' => __('Placeholder payments provider configuration step.', 'newera'),
+                'description' => __('Configure Stripe and optionally create sample plans.', 'newera'),
             ],
             'ai' => [
                 'title' => __('AI', 'newera'),
-                'description' => __('Configure your AI provider (OpenAI/Anthropic), store an API key securely, and select a model.', 'newera'),
+                'description' => __('Configure your AI provider and store an API key securely.', 'newera'),
+            ],
+            'integrations' => [
+                'title' => __('Integrations', 'newera'),
+                'description' => __('Optional: configure Linear and Notion credentials for sync.', 'newera'),
             ],
             'review' => [
-                'title' => __('Review', 'newera'),
-                'description' => __('Review and complete setup.', 'newera'),
+                'title' => __('Review & Confirm', 'newera'),
+                'description' => __('Review settings, validate required modules, and complete setup.', 'newera'),
             ],
         ];
     }
@@ -120,12 +116,7 @@ class SetupWizard {
         }
 
         $page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
-
-        if ($page === '') {
-            return;
-        }
-
-        if (strpos($page, 'newera') !== 0) {
+        if ($page === '' || strpos($page, 'newera') !== 0) {
             return;
         }
 
@@ -185,14 +176,11 @@ class SetupWizard {
             $current_step = $wizard_state['current_step'] ?? 'intro';
         }
 
-        // Enforce sequential access unless revisiting after completion.
         if (!$this->is_step_accessible($current_step, $wizard_state) && !$revisit) {
             $current_step = $wizard_state['current_step'] ?? 'intro';
         }
 
-        $step_context = function_exists('apply_filters')
-            ? apply_filters('newera_setup_wizard_step_context', [], $current_step, $this->state_manager)
-            : [];
+        $step_context = apply_filters('newera_setup_wizard_step_context', [], $current_step, $this->state_manager);
 
         $template_data = [
             'steps' => $this->steps,
@@ -208,20 +196,18 @@ class SetupWizard {
     }
 
     /**
-     * Handle POST submissions (non-AJAX fallback).
+     * Handle POST submissions (non-AJAX).
      *
-     * @param array $post POST data.
-     * @return string|\WP_Error Redirect URL or error.
+     * @param array $post
+     * @return string|\WP_Error
      */
     private function handle_post_submission($post) {
         $nonce = isset($post['newera_setup_wizard_nonce']) ? $post['newera_setup_wizard_nonce'] : '';
-
         if (!wp_verify_nonce($nonce, 'newera_setup_wizard_submit')) {
             return new \WP_Error('newera_setup_wizard_nonce', __('Security check failed.', 'newera'));
         }
 
         $step = isset($post['step']) ? sanitize_key($post['step']) : '';
-
         if ($step === '' || !isset($this->steps[$step])) {
             return new \WP_Error('newera_setup_wizard_step', __('Invalid wizard step.', 'newera'));
         }
@@ -240,23 +226,21 @@ class SetupWizard {
     /**
      * Handle POST reset.
      *
-     * @param array $post POST data.
+     * @param array $post
      * @return true|\WP_Error
      */
     private function handle_post_reset($post) {
         $nonce = isset($post['newera_setup_wizard_reset_nonce']) ? $post['newera_setup_wizard_reset_nonce'] : '';
-
         if (!wp_verify_nonce($nonce, 'newera_setup_wizard_reset')) {
             return new \WP_Error('newera_setup_wizard_reset_nonce', __('Security check failed.', 'newera'));
         }
 
         $this->reset_wizard();
-
         return true;
     }
 
     /**
-     * AJAX handler for saving a step.
+     * AJAX: save a step.
      */
     public function ajax_save_step() {
         check_ajax_referer('newera_setup_wizard_ajax', 'nonce');
@@ -281,7 +265,7 @@ class SetupWizard {
     }
 
     /**
-     * AJAX handler for resetting wizard.
+     * AJAX: reset wizard.
      */
     public function ajax_reset() {
         check_ajax_referer('newera_setup_wizard_ajax', 'nonce');
@@ -299,7 +283,7 @@ class SetupWizard {
     }
 
     /**
-     * AJAX handler for testing database connection
+     * AJAX: test database connection.
      */
     public function ajax_test_db_connection() {
         check_ajax_referer('newera_setup_wizard_ajax', 'nonce');
@@ -309,48 +293,37 @@ class SetupWizard {
         }
 
         $connection_string = isset($_POST['connection_string']) ? sanitize_text_field(wp_unslash($_POST['connection_string'])) : '';
-
-        if (empty($connection_string)) {
+        if ($connection_string === '') {
             wp_send_json_error(__('Connection string is required.', 'newera'), 400);
         }
 
         $db_factory = apply_filters('newera_get_db_factory', null);
-        
         if (!$db_factory) {
             wp_send_json_error(__('Database factory not available.', 'newera'), 500);
         }
 
         $result = $db_factory->test_connection($connection_string);
 
-        if ($result['success']) {
+        if (!empty($result['success'])) {
             wp_send_json_success($result);
-        } else {
-            wp_send_json_error($result['message'], 400);
         }
+
+        wp_send_json_error($result['message'] ?? __('Connection failed.', 'newera'), 400);
     }
 
     /**
      * Save step data and return next step.
      *
-     * @param string $step Step id.
-     * @param array $data Sanitized data.
-     * @return string Next step.
+     * @param string $step
+     * @param array $data
+     * @return string
      */
     private function save_step($step, $data) {
         $wizard_state = $this->get_wizard_state();
 
         $sanitized = $this->sanitize_step_data($step, $data);
-        $wizard_state['data'][$step] = $sanitized;
-        if ($step === 'auth') {
-            $this->persist_integration_credentials($data);
-        }
 
-        $wizard_state['data'][$step] = $this->sanitize_step_data($step, $data);
-        $sanitized = $this->sanitize_step_data($step, $data);
-
-        if (function_exists('do_action')) {
-            do_action('newera_setup_wizard_step_before_store', $step, $sanitized, $this->state_manager);
-        }
+        do_action('newera_setup_wizard_step_before_store', $step, $sanitized, $this->state_manager);
 
         $wizard_state['data'][$step] = $this->mask_sensitive_step_data($step, $sanitized);
 
@@ -358,16 +331,14 @@ class SetupWizard {
             $wizard_state['completed_steps'][] = $step;
         }
 
-        $next_step = $this->get_next_step($step);
-        $wizard_state['current_step'] = $next_step;
+        $wizard_state['current_step'] = $this->get_next_step($step);
         $wizard_state['last_updated'] = current_time('mysql');
 
         if ($step === 'review') {
             $wizard_state['completed'] = true;
             $wizard_state['completed_at'] = current_time('mysql');
             $wizard_state['current_step'] = 'review';
-            
-            // Trigger setup completion hooks for each configured provider
+
             $this->trigger_setup_completion($wizard_state);
         }
 
@@ -383,63 +354,113 @@ class SetupWizard {
      *
      * @param string $step
      * @param array $raw_data
-     * @param array $sanitized_data
+     * @param array $sanitized
      */
-    private function apply_step_side_effects($step, $raw_data, $sanitized_data) {
-        if ($step !== 'ai') {
-            return;
-        }
+    private function apply_step_side_effects($step, $raw_data, $sanitized) {
+        if ($step === 'database') {
+            $db_type = isset($sanitized['db_type']) ? $sanitized['db_type'] : 'wordpress';
 
-        if (!$this->state_manager) {
-            return;
-        }
-
-        $provider = isset($raw_data['provider']) ? sanitize_key($raw_data['provider']) : '';
-        $model = isset($raw_data['model']) ? sanitize_text_field($raw_data['model']) : '';
-
-        if ($provider === '' || $model === '') {
-            return;
-        }
-
-        $max_rpm = isset($raw_data['max_requests_per_minute']) ? (int) $raw_data['max_requests_per_minute'] : 0;
-        $monthly_tokens = isset($raw_data['monthly_token_quota']) ? (int) $raw_data['monthly_token_quota'] : 0;
-        $monthly_cost = isset($raw_data['monthly_cost_quota_usd']) ? (float) $raw_data['monthly_cost_quota_usd'] : 0;
-
-        $modules = $this->state_manager->get_setting('modules', []);
-        if (!is_array($modules)) {
-            $modules = [];
-        }
-
-        $current = isset($modules['ai']) && is_array($modules['ai']) ? $modules['ai'] : [];
-        $modules['ai'] = array_merge($current, [
-            'provider' => $provider,
-            'model' => $model,
-            'policies' => [
-                'max_requests_per_minute' => max(0, $max_rpm),
-                'monthly_token_quota' => max(0, $monthly_tokens),
-                'monthly_cost_quota_usd' => max(0, $monthly_cost),
-            ],
-        ]);
-
-        $this->state_manager->update_setting('modules', $modules);
-
-        $api_key = isset($raw_data['api_key']) ? sanitize_text_field($raw_data['api_key']) : '';
-        if ($api_key !== '') {
-            $secure_key = 'api_key_' . $provider;
-
-            if (method_exists($this->state_manager, 'hasSecure') && $this->state_manager->hasSecure('ai', $secure_key)) {
-                $this->state_manager->updateSecure('ai', $secure_key, $api_key);
-            } else {
-                $this->state_manager->setSecure('ai', $secure_key, $api_key);
+            if ($db_type === 'external' && !empty($sanitized['connection_string'])) {
+                $db_factory = apply_filters('newera_get_db_factory', null);
+                if ($db_factory) {
+                    $db_factory->save_configuration($sanitized);
+                    $db_factory->run_external_migrations();
+                }
             }
         }
 
-        $enabled = $this->state_manager->get_state_value('modules_enabled', []);
-        if (!is_array($enabled)) {
-            $enabled = [];
+        if ($step === 'payments') {
+            $provider = isset($sanitized['provider']) ? $sanitized['provider'] : '';
+            if ($provider === 'stripe') {
+                $api_key = isset($raw_data['stripe_api_key']) ? sanitize_text_field($raw_data['stripe_api_key']) : '';
+                $public_key = isset($raw_data['stripe_public_key']) ? sanitize_text_field($raw_data['stripe_public_key']) : '';
+                $webhook_secret = isset($raw_data['stripe_webhook_secret']) ? sanitize_text_field($raw_data['stripe_webhook_secret']) : '';
+                $mode = isset($sanitized['stripe_mode']) ? $sanitized['stripe_mode'] : 'test';
+
+                if (class_exists('\\Newera\\Payments\\StripeManager')) {
+                    $stripe = new \Newera\Payments\StripeManager($this->state_manager);
+                    if ($api_key !== '' && $public_key !== '') {
+                        $stripe->set_credentials($api_key, $public_key, $webhook_secret, $mode);
+                    }
+                }
+
+                $this->enable_module_in_state('payments');
+
+                if (!empty($sanitized['create_sample_plans']) && class_exists('\\Newera\\Payments\\PlanManager')) {
+                    $plan_manager = new \Newera\Payments\PlanManager($this->state_manager);
+                    $existing = $plan_manager->get_all_plans();
+
+                    if (empty($existing)) {
+                        $plan_manager->create_plan([
+                            'id' => 'starter',
+                            'name' => 'Starter',
+                            'description' => 'Sample plan created by Setup Wizard.',
+                            'amount' => 499,
+                            'currency' => 'inr',
+                            'interval' => 'month',
+                            'interval_count' => 1,
+                        ]);
+
+                        $plan_manager->create_plan([
+                            'id' => 'pro',
+                            'name' => 'Pro',
+                            'description' => 'Sample plan created by Setup Wizard.',
+                            'amount' => 1999,
+                            'currency' => 'inr',
+                            'interval' => 'month',
+                            'interval_count' => 1,
+                        ]);
+                    }
+                }
+            }
         }
-        $enabled['ai'] = true;
-        $this->state_manager->update_state('modules_enabled', $enabled);
+
+        if ($step === 'ai') {
+            $provider = isset($raw_data['provider']) ? sanitize_key($raw_data['provider']) : '';
+            $model = isset($raw_data['model']) ? sanitize_text_field($raw_data['model']) : '';
+
+            if ($provider === '' || $model === '') {
+                return;
+            }
+
+            $max_rpm = isset($raw_data['max_requests_per_minute']) ? (int) $raw_data['max_requests_per_minute'] : 0;
+            $monthly_tokens = isset($raw_data['monthly_token_quota']) ? (int) $raw_data['monthly_token_quota'] : 0;
+            $monthly_cost = isset($raw_data['monthly_cost_quota_usd']) ? (float) $raw_data['monthly_cost_quota_usd'] : 0;
+
+            $modules = $this->state_manager->get_setting('modules', []);
+            if (!is_array($modules)) {
+                $modules = [];
+            }
+
+            $current = isset($modules['ai']) && is_array($modules['ai']) ? $modules['ai'] : [];
+            $modules['ai'] = array_merge($current, [
+                'provider' => $provider,
+                'model' => $model,
+                'policies' => [
+                    'max_requests_per_minute' => max(0, $max_rpm),
+                    'monthly_token_quota' => max(0, $monthly_tokens),
+                    'monthly_cost_quota_usd' => max(0, $monthly_cost),
+                ],
+            ]);
+
+            $this->state_manager->update_setting('modules', $modules);
+
+            $api_key = isset($raw_data['api_key']) ? sanitize_text_field($raw_data['api_key']) : '';
+            if ($api_key !== '') {
+                $secure_key = 'api_key_' . $provider;
+                if ($this->state_manager->hasSecure('ai', $secure_key)) {
+                    $this->state_manager->updateSecure('ai', $secure_key, $api_key);
+                } else {
+                    $this->state_manager->setSecure('ai', $secure_key, $api_key);
+                }
+            }
+
+            $this->enable_module_in_state('ai');
+        }
+
+        if ($step === 'integrations') {
+            $this->persist_integrations_credentials($raw_data);
+        }
     }
 
     /**
@@ -450,8 +471,6 @@ class SetupWizard {
     }
 
     /**
-     * Check whether wizard is completed.
-     *
      * @return bool
      */
     private function is_completed() {
@@ -460,22 +479,15 @@ class SetupWizard {
     }
 
     /**
-     * Get wizard state with defaults.
-     *
      * @return array
      */
     private function get_wizard_state() {
         $state = $this->state_manager->get_state_value(self::STATE_KEY, []);
 
-        return array_merge(
-            $this->get_default_wizard_state(),
-            is_array($state) ? $state : []
-        );
+        return array_merge($this->get_default_wizard_state(), is_array($state) ? $state : []);
     }
 
     /**
-     * Default wizard state.
-     *
      * @return array
      */
     private function get_default_wizard_state() {
@@ -490,14 +502,12 @@ class SetupWizard {
     }
 
     /**
-     * Determine if a step is accessible based on current progress.
-     *
-     * @param string $step Step id.
-     * @param array $wizard_state Wizard state.
+     * @param string $step
+     * @param array $wizard_state
      * @return bool
      */
     private function is_step_accessible($step, $wizard_state) {
-        if ($this->is_completed()) {
+        if (!empty($wizard_state['completed'])) {
             return true;
         }
 
@@ -521,9 +531,7 @@ class SetupWizard {
     }
 
     /**
-     * Get next step id.
-     *
-     * @param string $step Current step.
+     * @param string $step
      * @return string
      */
     private function get_next_step($step) {
@@ -534,50 +542,22 @@ class SetupWizard {
             return 'intro';
         }
 
-        if (!isset($step_ids[$idx + 1])) {
-            return $step;
-        }
-
-        return $step_ids[$idx + 1];
+        return isset($step_ids[$idx + 1]) ? $step_ids[$idx + 1] : $step;
     }
 
     /**
-     * Get previous step id.
-     *
-     * @param string $step Current step.
-     * @return string
-     */
-    public function get_previous_step($step) {
-        $step_ids = array_keys($this->steps);
-        $idx = array_search($step, $step_ids, true);
-
-        if ($idx === false || $idx === 0) {
-            return 'intro';
-        }
-
-        return $step_ids[$idx - 1];
-    }
-
-    /**
-     * Get wizard url.
-     *
-     * @param array $args Additional query args.
+     * @param array $args
      * @return string
      */
     public function get_wizard_url($args = []) {
         $base = admin_url('admin.php?page=' . self::PAGE_SLUG);
-
-        if (empty($args)) {
-            return $base;
-        }
-
-        return add_query_arg($args, $base);
+        return empty($args) ? $base : add_query_arg($args, $base);
     }
 
     /**
      * Extract step data from a request.
      *
-     * @param array $request Raw request array.
+     * @param array $request
      * @return array
      */
     private function extract_step_data_from_request($request) {
@@ -607,18 +587,143 @@ class SetupWizard {
     }
 
     /**
-     * Persist integration credentials from the wizard auth step.
+     * Sanitize step-specific data.
      *
-     * Credentials are stored via StateManager secure storage (no central registry).
-     *
-     * @param array $data Sanitized request data.
+     * @param string $step
+     * @param array $data
+     * @return array
      */
-    private function persist_integration_credentials($data) {
+    private function sanitize_step_data($step, $data) {
+        $data = is_array($data) ? $data : [];
+
+        switch ($step) {
+            case 'intro':
+                return [
+                    'site_label' => isset($data['site_label']) ? sanitize_text_field($data['site_label']) : '',
+                ];
+
+            case 'auth':
+                $supported = ['email', 'magic_link', 'google', 'apple', 'github'];
+
+                $enabled = isset($data['providers_enabled']) && is_array($data['providers_enabled']) ? $data['providers_enabled'] : [];
+                $enabled = array_values(array_filter(array_map('sanitize_key', $enabled)));
+                $enabled = array_values(array_intersect($enabled, $supported));
+
+                $providers = [];
+                $raw_providers = isset($data['providers']) && is_array($data['providers']) ? $data['providers'] : [];
+
+                foreach ($supported as $provider) {
+                    $p = isset($raw_providers[$provider]) && is_array($raw_providers[$provider]) ? $raw_providers[$provider] : [];
+
+                    $providers[$provider] = [
+                        'client_id' => isset($p['client_id']) ? sanitize_text_field($p['client_id']) : '',
+                        'client_secret' => isset($p['client_secret']) ? sanitize_text_field($p['client_secret']) : '',
+                    ];
+                }
+
+                return [
+                    'providers_enabled' => $enabled,
+                    'providers' => $providers,
+                ];
+
+            case 'database':
+                return [
+                    'db_type' => isset($data['db_type']) ? sanitize_key($data['db_type']) : 'wordpress',
+                    'connection_string' => isset($data['connection_string']) ? sanitize_textarea_field($data['connection_string']) : '',
+                    'table_prefix' => isset($data['table_prefix']) ? sanitize_text_field($data['table_prefix']) : 'wp_',
+                    'persistent' => !empty($data['persistent']),
+                ];
+
+            case 'payments':
+                return [
+                    'provider' => isset($data['provider']) ? sanitize_key($data['provider']) : '',
+                    'stripe_mode' => isset($data['stripe_mode']) ? sanitize_key($data['stripe_mode']) : 'test',
+                    'create_sample_plans' => !empty($data['create_sample_plans']),
+                    'stripe_api_key_set' => !empty($data['stripe_api_key']),
+                    'stripe_public_key_set' => !empty($data['stripe_public_key']),
+                    'stripe_webhook_secret_set' => !empty($data['stripe_webhook_secret']),
+                ];
+
+            case 'ai':
+                return [
+                    'provider' => isset($data['provider']) ? sanitize_key($data['provider']) : '',
+                    'model' => isset($data['model']) ? sanitize_text_field($data['model']) : '',
+                    'max_requests_per_minute' => isset($data['max_requests_per_minute']) ? (int) $data['max_requests_per_minute'] : 0,
+                    'monthly_token_quota' => isset($data['monthly_token_quota']) ? (int) $data['monthly_token_quota'] : 0,
+                    'monthly_cost_quota_usd' => isset($data['monthly_cost_quota_usd']) ? (float) $data['monthly_cost_quota_usd'] : 0,
+                    'api_key_set' => !empty($data['api_key']),
+                ];
+
+            case 'integrations':
+                return [
+                    'linear_team_id' => isset($data['linear_team_id']) ? sanitize_text_field($data['linear_team_id']) : '',
+                    'notion_projects_database_id' => isset($data['notion_projects_database_id']) ? sanitize_text_field($data['notion_projects_database_id']) : '',
+                    'linear_api_key_set' => !empty($data['linear_api_key']),
+                    'linear_webhook_secret_set' => !empty($data['linear_webhook_secret']),
+                    'notion_api_key_set' => !empty($data['notion_api_key']),
+                    'notion_webhook_secret_set' => !empty($data['notion_webhook_secret']),
+                ];
+
+            case 'review':
+                return [
+                    'confirmed' => !empty($data['confirmed']),
+                ];
+
+            default:
+                $out = [];
+                foreach ($data as $key => $value) {
+                    $out[$key] = is_string($value) ? sanitize_text_field($value) : $value;
+                }
+                return $out;
+        }
+    }
+
+    /**
+     * Mask (remove) sensitive data before persisting wizard state.
+     *
+     * @param string $step
+     * @param array $data
+     * @return array
+     */
+    private function mask_sensitive_step_data($step, $data) {
         if (!is_array($data)) {
-            return;
+            return [];
         }
 
-        // Linear
+        if ($step === 'auth') {
+            $masked = [
+                'providers_enabled' => isset($data['providers_enabled']) && is_array($data['providers_enabled']) ? $data['providers_enabled'] : [],
+                'providers' => [],
+            ];
+
+            if (isset($data['providers']) && is_array($data['providers'])) {
+                foreach ($data['providers'] as $provider => $provider_data) {
+                    $client_id = isset($provider_data['client_id']) ? (string) $provider_data['client_id'] : '';
+                    $client_secret = isset($provider_data['client_secret']) ? (string) $provider_data['client_secret'] : '';
+
+                    $masked['providers'][sanitize_key($provider)] = [
+                        'client_id_last4' => $client_id !== '' ? substr($client_id, -4) : '',
+                        'client_id_provided' => $client_id !== '',
+                        'client_secret_provided' => $client_secret !== '',
+                    ];
+                }
+            }
+
+            return $masked;
+        }
+
+        // payments/integrations/ai already contain only boolean flags.
+        return $data;
+    }
+
+    /**
+     * Persist integration credentials from the integrations step.
+     *
+     * @param array $data Raw request data.
+     */
+    private function persist_integrations_credentials($data) {
+        $data = is_array($data) ? $data : [];
+
         if (class_exists('\\Newera\\Integrations\\Linear\\LinearManager')) {
             $linear = new \Newera\Integrations\Linear\LinearManager($this->state_manager);
 
@@ -635,7 +740,6 @@ class SetupWizard {
             }
         }
 
-        // Notion
         if (class_exists('\\Newera\\Integrations\\Notion\\NotionManager')) {
             $notion = new \Newera\Integrations\Notion\NotionManager($this->state_manager);
 
@@ -654,146 +758,36 @@ class SetupWizard {
     }
 
     /**
-     * Sanitize step-specific data.
+     * Trigger setup completion hooks.
      *
-     * Note: any sensitive values must be stored elsewhere (e.g. encrypted secure
-     * storage) and MUST NOT be persisted into the wizard state in wp_options.
-     *
-     * @param string $step Step id.
-     * @param array $data Data.
-     * @return array
+     * @param array $wizard_state
      */
-    private function sanitize_step_data($step, $data) {
-        $sanitized = [];
-
-        switch ($step) {
-            case 'auth':
-                $linear_configured = false;
-                if (class_exists('\\Newera\\Integrations\\Linear\\LinearManager')) {
-                    $linear = new \Newera\Integrations\Linear\LinearManager($this->state_manager);
-                    $linear_configured = method_exists($linear, 'is_configured') ? (bool) $linear->is_configured() : false;
-                }
-
-                $notion_configured = false;
-                if (class_exists('\\Newera\\Integrations\\Notion\\NotionManager')) {
-                    $notion = new \Newera\Integrations\Notion\NotionManager($this->state_manager);
-                    $notion_configured = method_exists($notion, 'is_configured') ? (bool) $notion->is_configured() : false;
-                }
-
-                $sanitized['linear_configured'] = $linear_configured;
-                $sanitized['linear_team_id'] = isset($data['linear_team_id']) ? sanitize_text_field($data['linear_team_id']) : '';
-                $sanitized['notion_configured'] = $notion_configured;
-                $sanitized['notion_projects_database_id'] = isset($data['notion_projects_database_id']) ? sanitize_text_field($data['notion_projects_database_id']) : '';
-                $supported_providers = ['email', 'magic_link', 'google', 'apple', 'github'];
-
-                $selected = isset($data['auth_providers']) && is_array($data['auth_providers']) ? $data['auth_providers'] : [];
-                $selected = array_values(array_filter(array_map('sanitize_key', $selected)));
-                $selected = array_values(array_intersect($selected, $supported_providers));
-
-                $providers = [];
-                foreach ($supported_providers as $provider) {
-                    $providers[$provider] = [
-                        'client_id' => isset($data[$provider . '_client_id']) ? sanitize_text_field($data[$provider . '_client_id']) : '',
-                        'client_secret' => isset($data[$provider . '_client_secret']) ? sanitize_text_field($data[$provider . '_client_secret']) : '',
-                    ];
-                }
-
-                $sanitized = [
-                    'providers_enabled' => $selected,
-                    'providers' => $providers,
-                ];
-                break;
-
-            case 'database':
-                $sanitized['db_type'] = isset($data['db_type']) ? sanitize_text_field($data['db_type']) : 'wordpress';
-                $sanitized['connection_string'] = isset($data['connection_string']) ? sanitize_textarea_field($data['connection_string']) : '';
-                $sanitized['table_prefix'] = isset($data['table_prefix']) ? sanitize_text_field($data['table_prefix']) : 'wp_';
-                $sanitized['persistent'] = !empty($data['persistent']);
-                
-                if ($sanitized['db_type'] === 'external' && !empty($sanitized['connection_string'])) {
-                    $db_factory = apply_filters('newera_get_db_factory', null);
-                    if ($db_factory) {
-                        $db_factory->save_configuration($sanitized);
-                        
-                        $migration_result = $db_factory->run_external_migrations();
-                        if (!$migration_result) {
-                            $sanitized['migration_warning'] = 'External database migrations may have failed. Check logs.';
-                        }
-                    }
-                }
-                break;
-
-            case 'payments':
-                $sanitized['provider'] = isset($data['provider']) ? sanitize_text_field($data['provider']) : '';
-                $sanitized['stripe_key'] = isset($data['stripe_key']) ? sanitize_text_field($data['stripe_key']) : '';
-                $sanitized['stripe_secret'] = isset($data['stripe_secret']) ? sanitize_text_field($data['stripe_secret']) : '';
-                $sanitized['default_currency'] = isset($data['default_currency']) ? sanitize_text_field($data['default_currency']) : 'usd';
-                break;
-
-            case 'ai':
-                $sanitized['provider'] = isset($data['provider']) ? sanitize_key($data['provider']) : '';
-                $sanitized['model'] = isset($data['model']) ? sanitize_text_field($data['model']) : '';
-
-                $sanitized['max_requests_per_minute'] = isset($data['max_requests_per_minute']) ? (int) $data['max_requests_per_minute'] : 0;
-                $sanitized['monthly_token_quota'] = isset($data['monthly_token_quota']) ? (int) $data['monthly_token_quota'] : 0;
-                $sanitized['monthly_cost_quota_usd'] = isset($data['monthly_cost_quota_usd']) ? (float) $data['monthly_cost_quota_usd'] : 0;
-
-                // Do not store plaintext API keys in wizard state.
-                $sanitized['api_key_set'] = !empty($data['api_key']);
-                break;
-
-            case 'intro':
-            case 'review':
-            default:
-                foreach ($data as $key => $value) {
-                    $sanitized[$key] = is_string($value) ? sanitize_text_field($value) : $value;
-                }
-                break;
+    private function trigger_setup_completion($wizard_state) {
+        // Flush rewrite rules after enabling webhook endpoints (best-effort).
+        if (function_exists('flush_rewrite_rules')) {
+            flush_rewrite_rules(false);
         }
 
-        return $sanitized;
+        do_action('newera_setup_wizard_completed', $wizard_state, $this->state_manager);
     }
 
     /**
-     * Trigger setup completion hooks for configured providers
-     */
-    private function trigger_setup_completion($wizard_state) {
-        // Trigger setup completion for Stripe payments if configured
-        if (isset($wizard_state['data']['payments']['provider']) && $wizard_state['data']['payments']['provider'] === 'stripe') {
-            if (class_exists('\\Newera\\Modules\\Payments\\StripeManager')) {
-                $stripe_manager = new \Newera\Modules\Payments\StripeManager($this->state_manager, null);
-                $stripe_manager->setup_wizard_completed();
-            }
-        }
-     * Mask (remove) sensitive data before persisting wizard state.
+     * Enable a module id within plugin state.
      *
-     * @param string $step Step id.
-     * @param array $data Sanitized step data.
-     * @return array
+     * @param string $module_id
      */
-    private function mask_sensitive_step_data($step, $data) {
-        if ($step !== 'auth' || !is_array($data)) {
-            return $data;
+    private function enable_module_in_state($module_id) {
+        $module_id = sanitize_key($module_id);
+        if ($module_id === '') {
+            return;
         }
 
-        $masked = [
-            'providers_enabled' => isset($data['providers_enabled']) && is_array($data['providers_enabled']) ? $data['providers_enabled'] : [],
-            'providers' => [],
-        ];
-
-        if (isset($data['providers']) && is_array($data['providers'])) {
-            foreach ($data['providers'] as $provider => $provider_data) {
-                $client_id = isset($provider_data['client_id']) ? (string) $provider_data['client_id'] : '';
-                $client_secret = isset($provider_data['client_secret']) ? (string) $provider_data['client_secret'] : '';
-
-                $masked['providers'][sanitize_key($provider)] = [
-                    'client_id_last4' => $client_id !== '' ? substr($client_id, -4) : '',
-                    'client_id_provided' => $client_id !== '',
-                    'client_secret_provided' => $client_secret !== '',
-                ];
-            }
+        $enabled = $this->state_manager->get_state_value('modules_enabled', []);
+        if (!is_array($enabled)) {
+            $enabled = [];
         }
 
-        return $masked;
+        $enabled[$module_id] = true;
+        $this->state_manager->update_state('modules_enabled', $enabled);
     }
 }

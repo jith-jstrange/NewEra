@@ -162,8 +162,13 @@ class StripeManager {
             return false;
         }
 
-        $url = self::STRIPE_API_URL . $endpoint;
-        
+        if ($this->is_mock_mode()) {
+            return $this->mock_api_request($method, $endpoint, $data);
+        }
+
+        $base = $this->get_api_base_url();
+        $url = rtrim($base, '/') . $endpoint;
+
         $headers = [
             'Authorization' => 'Bearer ' . $this->api_key,
             'Stripe-Version' => self::STRIPE_API_VERSION,
@@ -174,12 +179,12 @@ class StripeManager {
             'method' => $method,
             'headers' => $headers,
             'timeout' => 30,
-            'sslverify' => true,
+            'sslverify' => (strpos($url, 'https://') === 0),
         ];
 
-        if (!empty($data) && $method !== 'GET') {
+        if (!empty($data) && strtoupper($method) !== 'GET') {
             $args['body'] = http_build_query($data);
-        } elseif (!empty($data) && $method === 'GET') {
+        } elseif (!empty($data) && strtoupper($method) === 'GET') {
             $url .= '?' . http_build_query($data);
         }
 
@@ -195,7 +200,7 @@ class StripeManager {
             $decoded = json_decode($body, true);
 
             if ($status >= 400) {
-                throw new \Exception('Stripe API Error (' . $status . '): ' . 
+                throw new \Exception('Stripe API Error (' . $status . '): ' .
                     (isset($decoded['error']['message']) ? $decoded['error']['message'] : 'Unknown error'));
             }
 
@@ -208,6 +213,201 @@ class StripeManager {
             ]);
             return false;
         }
+    }
+
+    /**
+     * @return string
+     */
+    private function get_api_base_url() {
+        $env = getenv('NEWERA_STRIPE_API_URL');
+        if (is_string($env) && $env !== '') {
+            return $env;
+        }
+
+        return self::STRIPE_API_URL;
+    }
+
+    /**
+     * @return bool
+     */
+    private function is_mock_mode() {
+        return function_exists('newera_is_e2e_mode') && newera_is_e2e_mode();
+    }
+
+    /**
+     * Deterministic mock Stripe responses for E2E tests.
+     *
+     * @param string $method
+     * @param string $endpoint
+     * @param array $data
+     * @return array|false
+     */
+    private function mock_api_request($method, $endpoint, $data = []) {
+        $method = strtoupper((string) $method);
+        $endpoint = (string) $endpoint;
+
+        $store = $this->state_manager->get_state_value('mock_stripe', []);
+        if (!is_array($store)) {
+            $store = [];
+        }
+
+        $store += [
+            'customers' => [],
+            'products' => [],
+            'prices' => [],
+            'subscriptions' => [],
+            'webhook_endpoints' => [],
+        ];
+
+        $save = function() use (&$store) {
+            $this->state_manager->update_state('mock_stripe', $store);
+        };
+
+        if ($endpoint === '/account' && $method === 'GET') {
+            return [
+                'id' => 'acct_mock',
+                'object' => 'account',
+                'charges_enabled' => true,
+                'details_submitted' => true,
+            ];
+        }
+
+        if ($endpoint === '/customers' && $method === 'POST') {
+            $id = 'cus_' . substr(md5(wp_json_encode($data) . microtime(true)), 0, 10);
+            $customer = array_merge([
+                'id' => $id,
+                'object' => 'customer',
+                'email' => $data['email'] ?? null,
+                'name' => $data['name'] ?? null,
+                'metadata' => $data['metadata'] ?? [],
+            ], []);
+
+            $store['customers'][$id] = $customer;
+            $save();
+            return $customer;
+        }
+
+        if (preg_match('#^/customers/([^/]+)$#', $endpoint, $m) && $method === 'GET') {
+            $id = $m[1];
+            return isset($store['customers'][$id]) ? $store['customers'][$id] : false;
+        }
+
+        if ($endpoint === '/products' && $method === 'POST') {
+            $id = 'prod_' . substr(md5(wp_json_encode($data) . microtime(true)), 0, 10);
+            $product = [
+                'id' => $id,
+                'object' => 'product',
+                'name' => $data['name'] ?? '',
+                'description' => $data['description'] ?? null,
+            ];
+            $store['products'][$id] = $product;
+            $save();
+            return $product;
+        }
+
+        if ($endpoint === '/prices' && $method === 'POST') {
+            $id = 'price_' . substr(md5(wp_json_encode($data) . microtime(true)), 0, 10);
+            $price = [
+                'id' => $id,
+                'object' => 'price',
+                'unit_amount' => (int) ($data['unit_amount'] ?? 0),
+                'currency' => (string) ($data['currency'] ?? 'usd'),
+                'recurring' => $data['recurring'] ?? ['interval' => 'month'],
+                'product' => $data['product'] ?? null,
+            ];
+            $store['prices'][$id] = $price;
+            $save();
+            return $price;
+        }
+
+        if ($endpoint === '/subscriptions' && $method === 'POST') {
+            $sub_id = 'sub_' . substr(md5(wp_json_encode($data) . microtime(true)), 0, 10);
+
+            $price_id = $data['items'][0]['price'] ?? '';
+            $price = $price_id && isset($store['prices'][$price_id]) ? $store['prices'][$price_id] : [
+                'id' => $price_id,
+                'unit_amount' => 0,
+                'currency' => 'usd',
+                'recurring' => ['interval' => 'month'],
+            ];
+
+            $now = time();
+            $period_end = strtotime('+30 days', $now);
+
+            $subscription = [
+                'id' => $sub_id,
+                'object' => 'subscription',
+                'customer' => $data['customer'] ?? null,
+                'status' => 'active',
+                'current_period_start' => $now,
+                'current_period_end' => $period_end,
+                'items' => [
+                    'data' => [
+                        [
+                            'price' => $price,
+                        ],
+                    ],
+                ],
+            ];
+
+            $store['subscriptions'][$sub_id] = $subscription;
+            $save();
+            return $subscription;
+        }
+
+        if (preg_match('#^/subscriptions/([^/]+)$#', $endpoint, $m)) {
+            $sub_id = $m[1];
+
+            if (!isset($store['subscriptions'][$sub_id])) {
+                return false;
+            }
+
+            if ($method === 'GET') {
+                return $store['subscriptions'][$sub_id];
+            }
+
+            if ($method === 'DELETE') {
+                $store['subscriptions'][$sub_id]['status'] = 'canceled';
+                $save();
+                return $store['subscriptions'][$sub_id];
+            }
+
+            if ($method === 'POST') {
+                // Update subscription.
+                foreach ($data as $k => $v) {
+                    $store['subscriptions'][$sub_id][$k] = $v;
+                }
+                $save();
+                return $store['subscriptions'][$sub_id];
+            }
+        }
+
+        if ($endpoint === '/webhook_endpoints' && $method === 'POST') {
+            $id = 'we_' . substr(md5(wp_json_encode($data) . microtime(true)), 0, 10);
+            $webhook = [
+                'id' => $id,
+                'object' => 'webhook_endpoint',
+                'url' => $data['url'] ?? '',
+                'enabled_events' => $data['enabled_events'] ?? [],
+            ];
+            $store['webhook_endpoints'][$id] = $webhook;
+            $save();
+            return $webhook;
+        }
+
+        if ($endpoint === '/webhook_endpoints' && $method === 'GET') {
+            return [
+                'object' => 'list',
+                'data' => array_values($store['webhook_endpoints']),
+            ];
+        }
+
+        $this->logger->warning('Stripe mock endpoint not implemented', [
+            'method' => $method,
+            'endpoint' => $endpoint,
+        ]);
+
+        return false;
     }
 
     /**

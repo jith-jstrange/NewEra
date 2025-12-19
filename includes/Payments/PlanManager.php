@@ -284,45 +284,7 @@ class PlanManager {
             return false;
         }
 
-        $url = 'https://api.stripe.com/v1/products';
-        
-        $headers = [
-            'Authorization' => 'Bearer ' . $this->get_stripe_api_key(),
-            'Stripe-Version' => '2023-10-16',
-            'Content-Type' => 'application/x-www-form-urlencoded',
-        ];
-
-        $args = [
-            'method' => 'POST',
-            'headers' => $headers,
-            'body' => http_build_query($data),
-            'timeout' => 30,
-            'sslverify' => true,
-        ];
-
-        try {
-            $response = wp_remote_request($url, $args);
-
-            if (is_wp_error($response)) {
-                throw new \Exception('HTTP Error: ' . $response->get_error_message());
-            }
-
-            $status = wp_remote_retrieve_response_code($response);
-            $body = wp_remote_retrieve_body($response);
-            $decoded = json_decode($body, true);
-
-            if ($status >= 400) {
-                throw new \Exception('Stripe API Error (' . $status . '): ' . 
-                    (isset($decoded['error']['message']) ? $decoded['error']['message'] : 'Unknown error'));
-            }
-
-            return $decoded;
-        } catch (\Exception $e) {
-            $this->logger->error('Failed to create Stripe product', [
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
+        return $this->stripe->api_request('POST', '/products', $data);
     }
 
     /**
