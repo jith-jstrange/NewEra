@@ -391,6 +391,47 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
                                     </select>
                                 </td>
                             </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="stripe_api_key"><?php _e('Stripe API Key', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="password" id="stripe_api_key" name="stripe_api_key" value="<?php echo esc_attr($saved_current['stripe_api_key'] ?? ''); ?>" class="regular-text" autocomplete="off" />
+                                    <p class="description">
+                                        <?php _e('Get this from your Stripe Dashboard: ', 'newera'); ?>
+                                        <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">https://dashboard.stripe.com/apikeys</a>
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="stripe_public_key"><?php _e('Stripe Publishable Key', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="text" id="stripe_public_key" name="stripe_public_key" value="<?php echo esc_attr($saved_current['stripe_public_key'] ?? ''); ?>" class="regular-text" />
+                                    <p class="description">
+                                        <?php _e('Also from your Stripe Dashboard API Keys page', 'newera'); ?>
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="stripe_mode"><?php _e('Stripe Environment', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <select id="stripe_mode" name="stripe_mode">
+                                        <option value="test" <?php selected($saved_current['stripe_mode'] ?? 'test', 'test'); ?>>
+                                            <?php _e('Test Mode (Development)', 'newera'); ?>
+                                        </option>
+                                        <option value="live" <?php selected($saved_current['stripe_mode'] ?? 'test', 'live'); ?>>
+                                            <?php _e('Live Mode (Production)', 'newera'); ?>
+                                        </option>
+                                    </select>
+                                    <p class="description">
+                                        <?php _e('Use test mode to safely test payment processing.', 'newera'); ?>
+                                    </p>
+                                </td>
+                            </tr>
                         <?php elseif ($current_step === 'ai') : ?>
                             <?php
                             $ai_manager = function_exists('newera_get_ai_manager') ? newera_get_ai_manager() : null;
