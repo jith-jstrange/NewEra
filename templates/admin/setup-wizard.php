@@ -128,6 +128,77 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
                             </tr>
                         <?php elseif ($current_step === 'auth') : ?>
                             <?php
+                            $linear_manager = function_exists('newera_get_linear_manager') ? newera_get_linear_manager() : null;
+                            $notion_manager = function_exists('newera_get_notion_manager') ? newera_get_notion_manager() : null;
+
+                            $linear_configured = $linear_manager && method_exists($linear_manager, 'is_configured') && $linear_manager->is_configured();
+                            $notion_configured = $notion_manager && method_exists($notion_manager, 'is_configured') && $notion_manager->is_configured();
+
+                            $linear_team_id_value = $saved_current['linear_team_id'] ?? ($linear_manager && method_exists($linear_manager, 'get_team_id') ? $linear_manager->get_team_id() : '');
+                            $notion_projects_db_value = $saved_current['notion_projects_database_id'] ?? ($notion_manager && method_exists($notion_manager, 'get_projects_database_id') ? $notion_manager->get_projects_database_id() : '');
+                            ?>
+
+                            <tr>
+                                <th scope="row">
+                                    <label for="linear_api_key"><?php _e('Linear API Key', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="password" id="linear_api_key" name="linear_api_key" value="" class="regular-text" autocomplete="off" />
+                                    <p class="description">
+                                        <?php echo $linear_configured ? esc_html__('A key is already stored securely. Leave blank to keep it.', 'newera') : esc_html__('Paste a Linear personal API key from the installer account.', 'newera'); ?>
+                                    </p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th scope="row">
+                                    <label for="linear_webhook_secret"><?php _e('Linear Webhook Secret', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="password" id="linear_webhook_secret" name="linear_webhook_secret" value="" class="regular-text" autocomplete="off" />
+                                    <p class="description"><?php _e('Used to validate incoming Linear webhook signatures.', 'newera'); ?></p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th scope="row">
+                                    <label for="linear_team_id"><?php _e('Linear Team ID', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="text" id="linear_team_id" name="linear_team_id" value="<?php echo esc_attr($linear_team_id_value); ?>" class="regular-text" />
+                                    <p class="description"><?php _e('Required to create issues from new projects. You can also configure this later under Newera → Integrations.', 'newera'); ?></p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th scope="row">
+                                    <label for="notion_api_key"><?php _e('Notion API Key', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="password" id="notion_api_key" name="notion_api_key" value="" class="regular-text" autocomplete="off" />
+                                    <p class="description">
+                                        <?php echo $notion_configured ? esc_html__('A key is already stored securely. Leave blank to keep it.', 'newera') : esc_html__('Paste a Notion integration token from the installer account.', 'newera'); ?>
+                                    </p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th scope="row">
+                                    <label for="notion_webhook_secret"><?php _e('Notion Webhook Secret', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="password" id="notion_webhook_secret" name="notion_webhook_secret" value="" class="regular-text" autocomplete="off" />
+                                    <p class="description"><?php _e('Used to validate incoming webhook requests (if configured).', 'newera'); ?></p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th scope="row">
+                                    <label for="notion_projects_database_id"><?php _e('Notion Projects Database ID', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="text" id="notion_projects_database_id" name="notion_projects_database_id" value="<?php echo esc_attr($notion_projects_db_value); ?>" class="regular-text" />
+                                    <p class="description"><?php _e('Optional. If set, projects will sync to a Notion database (Name/Status/Progress).', 'newera'); ?></p>
                             $auth_providers = isset($step_context['providers']) && is_array($step_context['providers']) ? $step_context['providers'] : [];
                             $enabled_providers = $saved_current['providers_enabled'] ?? ($step_context['enabled_providers'] ?? []);
                             $enabled_providers = is_array($enabled_providers) ? $enabled_providers : [];
@@ -378,23 +449,143 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
                                 <td>
                                     <input type="text" id="webhook_url" value="<?php echo esc_attr(home_url('/newera-stripe-webhook/')); ?>" class="regular-text" readonly />
                                     <p class="description"><?php _e('This URL will be automatically configured as your Stripe webhook endpoint.', 'newera'); ?></p>
+                            <tr>
+                                <th scope="row">
+                                    <label for="stripe_api_key"><?php _e('Stripe API Key', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="password" id="stripe_api_key" name="stripe_api_key" value="<?php echo esc_attr($saved_current['stripe_api_key'] ?? ''); ?>" class="regular-text" autocomplete="off" />
+                                    <p class="description">
+                                        <?php _e('Get this from your Stripe Dashboard: ', 'newera'); ?>
+                                        <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">https://dashboard.stripe.com/apikeys</a>
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="stripe_public_key"><?php _e('Stripe Publishable Key', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="text" id="stripe_public_key" name="stripe_public_key" value="<?php echo esc_attr($saved_current['stripe_public_key'] ?? ''); ?>" class="regular-text" />
+                                    <p class="description">
+                                        <?php _e('Also from your Stripe Dashboard API Keys page', 'newera'); ?>
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="stripe_mode"><?php _e('Stripe Environment', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <select id="stripe_mode" name="stripe_mode">
+                                        <option value="test" <?php selected($saved_current['stripe_mode'] ?? 'test', 'test'); ?>>
+                                            <?php _e('Test Mode (Development)', 'newera'); ?>
+                                        </option>
+                                        <option value="live" <?php selected($saved_current['stripe_mode'] ?? 'test', 'live'); ?>>
+                                            <?php _e('Live Mode (Production)', 'newera'); ?>
+                                        </option>
+                                    </select>
+                                    <p class="description">
+                                        <?php _e('Use test mode to safely test payment processing.', 'newera'); ?>
+                                    </p>
                                 </td>
                             </tr>
                         <?php elseif ($current_step === 'ai') : ?>
+                            <?php
+                            $ai_manager = function_exists('newera_get_ai_manager') ? newera_get_ai_manager() : null;
+                            $provider_value = sanitize_key($saved_current['provider'] ?? '');
+                            $api_key_stored = ($ai_manager && $provider_value !== '' && method_exists($ai_manager, 'has_api_key')) ? (bool) $ai_manager->has_api_key($provider_value) : false;
+                            ?>
                             <tr>
                                 <th scope="row">
-                                    <label for="provider"><?php _e('AI Provider', 'newera'); ?></label>
+                                    <label for="ai_provider"><?php _e('AI Provider', 'newera'); ?></label>
                                 </th>
                                 <td>
-                                    <input type="text" id="provider" name="provider" value="<?php echo esc_attr($saved_current['provider'] ?? ''); ?>" class="regular-text" />
+                                    <select id="ai_provider" name="provider">
+                                        <?php
+                                        $providers = [
+                                            '' => __('Select…', 'newera'),
+                                            'openai' => 'OpenAI',
+                                            'anthropic' => 'Anthropic',
+                                        ];
+                                        foreach ($providers as $value => $label) {
+                                            printf(
+                                                '<option value="%s" %s>%s</option>',
+                                                esc_attr($value),
+                                                selected($provider_value, $value, false),
+                                                esc_html($label)
+                                            );
+                                        }
+                                        ?>
+                                    </select>
+                                    <p class="description">
+                                        <?php _e('Select a provider, enter an API key, then load models.', 'newera'); ?>
+                                    </p>
                                 </td>
                             </tr>
                             <tr>
                                 <th scope="row">
-                                    <label for="model"><?php _e('Model', 'newera'); ?></label>
+                                    <label for="ai_api_key"><?php _e('API Key', 'newera'); ?></label>
                                 </th>
                                 <td>
-                                    <input type="text" id="model" name="model" value="<?php echo esc_attr($saved_current['model'] ?? ''); ?>" class="regular-text" />
+                                    <input type="password" id="ai_api_key" name="api_key" value="" class="regular-text" autocomplete="off" />
+                                    <p class="description">
+                                        <?php _e('Stored encrypted. Leave empty to keep existing.', 'newera'); ?>
+                                        <?php if ($api_key_stored) : ?>
+                                            <strong><?php _e('A key is already stored for this provider.', 'newera'); ?></strong>
+                                        <?php endif; ?>
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="ai_model"><?php _e('Model', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                        <input type="text" id="ai_model" name="model" value="<?php echo esc_attr($saved_current['model'] ?? ''); ?>" class="regular-text" />
+                                        <button type="button" class="button" id="newera-wizard-ai-load-models">
+                                            <?php _e('Load Models', 'newera'); ?>
+                                        </button>
+                                        <select id="newera-wizard-ai-models" style="min-width:260px;">
+                                            <option value=""><?php _e('Select from loaded models…', 'newera'); ?></option>
+                                            <?php if (!empty($saved_current['model'])) : ?>
+                                                <option value="<?php echo esc_attr($saved_current['model']); ?>" selected>
+                                                    <?php echo esc_html($saved_current['model']); ?>
+                                                </option>
+                                            <?php endif; ?>
+                                        </select>
+                                    </div>
+                                    <p class="description">
+                                        <?php _e('If model listing fails, paste a model id manually.', 'newera'); ?>
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="ai_max_requests_per_minute"><?php _e('Max Requests / Minute', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="number" min="0" id="ai_max_requests_per_minute" name="max_requests_per_minute" value="<?php echo esc_attr($saved_current['max_requests_per_minute'] ?? 60); ?>" />
+                                    <p class="description"><?php _e('Rate limit to avoid runaway usage. Set 0 to disable.', 'newera'); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="ai_monthly_token_quota"><?php _e('Monthly Token Quota', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="number" min="0" id="ai_monthly_token_quota" name="monthly_token_quota" value="<?php echo esc_attr($saved_current['monthly_token_quota'] ?? 50000); ?>" />
+                                    <p class="description"><?php _e('Monthly safety cap. Set 0 to disable.', 'newera'); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <label for="ai_monthly_cost_quota_usd"><?php _e('Monthly Cost Quota (USD)', 'newera'); ?></label>
+                                </th>
+                                <td>
+                                    <input type="number" step="0.01" min="0" id="ai_monthly_cost_quota_usd" name="monthly_cost_quota_usd" value="<?php echo esc_attr($saved_current['monthly_cost_quota_usd'] ?? 0); ?>" />
+                                    <p class="description"><?php _e('Optional. Cost tracking requires pricing configured in Newera → AI.', 'newera'); ?></p>
                                 </td>
                             </tr>
                         <?php elseif ($current_step === 'review') : ?>
@@ -415,6 +606,56 @@ $saved_current = $wizard_state['data'][$current_step] ?? [];
                         <?php endif; ?>
                     </tbody>
                 </table>
+
+                <?php if ($current_step === 'ai') : ?>
+                    <script>
+                    (function($) {
+                        function loadModels(provider) {
+                            $('#newera-wizard-ai-load-models').prop('disabled', true);
+
+                            $.post(newera_ajax.ajax_url, {
+                                action: 'newera_ai_list_models',
+                                nonce: newera_ajax.nonce,
+                                provider: provider,
+                                api_key: $('#ai_api_key').val() || ''
+                            }).done(function(resp) {
+                                if (!resp || !resp.success) {
+                                    alert((resp && resp.data) ? resp.data : 'Failed to load models.');
+                                    return;
+                                }
+
+                                var $select = $('#newera-wizard-ai-models');
+                                $select.empty();
+                                $select.append($('<option>').val('').text('<?php echo esc_js(__('Select from loaded models…', 'newera')); ?>'));
+
+                                (resp.data.models || []).forEach(function(m) {
+                                    $select.append($('<option>').val(m.id).text(m.label || m.id));
+                                });
+                            }).fail(function() {
+                                alert('Failed to load models.');
+                            }).always(function() {
+                                $('#newera-wizard-ai-load-models').prop('disabled', false);
+                            });
+                        }
+
+                        $(document).on('click', '#newera-wizard-ai-load-models', function() {
+                            var provider = $('#ai_provider').val();
+                            if (!provider) {
+                                alert('<?php echo esc_js(__('Please select a provider first.', 'newera')); ?>');
+                                return;
+                            }
+                            loadModels(provider);
+                        });
+
+                        $(document).on('change', '#newera-wizard-ai-models', function() {
+                            var v = $(this).val();
+                            if (v) {
+                                $('#ai_model').val(v);
+                            }
+                        });
+                    })(jQuery);
+                    </script>
+                <?php endif; ?>
 
                 <p>
                     <?php

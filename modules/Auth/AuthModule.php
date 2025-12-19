@@ -88,6 +88,28 @@ class AuthModule extends BaseModule {
     }
 
     /**
+     * Enable Google Sign-In
+     * 
+     * @param array $params
+     * @return array
+     * @throws \Exception
+     */
+    public function enableGoogleSignIn($params) {
+        $client_id = $params['client_id'] ?? '';
+        $client_secret = $params['client_secret'] ?? '';
+
+        if (empty($client_id) || empty($client_secret)) {
+            throw new \Exception('Client ID and Client Secret are required');
+        }
+
+        $this->set_credential('google_client_id', $client_id);
+        $this->set_credential('google_client_secret', $client_secret);
+        $this->set_credential('google_signin_enabled', true);
+        
+        return ['message' => 'Google Sign-In enabled successfully'];
+    }
+
+    /**
      * Register hooks only when active.
      */
     public function registerHooks() {

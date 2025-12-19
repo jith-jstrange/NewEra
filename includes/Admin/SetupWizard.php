@@ -68,7 +68,7 @@ class SetupWizard {
             ],
             'ai' => [
                 'title' => __('AI', 'newera'),
-                'description' => __('Placeholder AI provider configuration step.', 'newera'),
+                'description' => __('Configure your AI provider (OpenAI/Anthropic), store an API key securely, and select a model.', 'newera'),
             ],
             'review' => [
                 'title' => __('Review', 'newera'),
@@ -340,6 +340,13 @@ class SetupWizard {
         $wizard_state = $this->get_wizard_state();
 
         $sanitized = $this->sanitize_step_data($step, $data);
+        $wizard_state['data'][$step] = $sanitized;
+        if ($step === 'auth') {
+            $this->persist_integration_credentials($data);
+        }
+
+        $wizard_state['data'][$step] = $this->sanitize_step_data($step, $data);
+        $sanitized = $this->sanitize_step_data($step, $data);
 
         if (function_exists('do_action')) {
             do_action('newera_setup_wizard_step_before_store', $step, $sanitized, $this->state_manager);
@@ -366,7 +373,73 @@ class SetupWizard {
 
         $this->state_manager->update_state(self::STATE_KEY, $wizard_state);
 
+        $this->apply_step_side_effects($step, $data, $sanitized);
+
         return $wizard_state['current_step'];
+    }
+
+    /**
+     * Apply step side effects (persist module configuration, store secure credentials, etc).
+     *
+     * @param string $step
+     * @param array $raw_data
+     * @param array $sanitized_data
+     */
+    private function apply_step_side_effects($step, $raw_data, $sanitized_data) {
+        if ($step !== 'ai') {
+            return;
+        }
+
+        if (!$this->state_manager) {
+            return;
+        }
+
+        $provider = isset($raw_data['provider']) ? sanitize_key($raw_data['provider']) : '';
+        $model = isset($raw_data['model']) ? sanitize_text_field($raw_data['model']) : '';
+
+        if ($provider === '' || $model === '') {
+            return;
+        }
+
+        $max_rpm = isset($raw_data['max_requests_per_minute']) ? (int) $raw_data['max_requests_per_minute'] : 0;
+        $monthly_tokens = isset($raw_data['monthly_token_quota']) ? (int) $raw_data['monthly_token_quota'] : 0;
+        $monthly_cost = isset($raw_data['monthly_cost_quota_usd']) ? (float) $raw_data['monthly_cost_quota_usd'] : 0;
+
+        $modules = $this->state_manager->get_setting('modules', []);
+        if (!is_array($modules)) {
+            $modules = [];
+        }
+
+        $current = isset($modules['ai']) && is_array($modules['ai']) ? $modules['ai'] : [];
+        $modules['ai'] = array_merge($current, [
+            'provider' => $provider,
+            'model' => $model,
+            'policies' => [
+                'max_requests_per_minute' => max(0, $max_rpm),
+                'monthly_token_quota' => max(0, $monthly_tokens),
+                'monthly_cost_quota_usd' => max(0, $monthly_cost),
+            ],
+        ]);
+
+        $this->state_manager->update_setting('modules', $modules);
+
+        $api_key = isset($raw_data['api_key']) ? sanitize_text_field($raw_data['api_key']) : '';
+        if ($api_key !== '') {
+            $secure_key = 'api_key_' . $provider;
+
+            if (method_exists($this->state_manager, 'hasSecure') && $this->state_manager->hasSecure('ai', $secure_key)) {
+                $this->state_manager->updateSecure('ai', $secure_key, $api_key);
+            } else {
+                $this->state_manager->setSecure('ai', $secure_key, $api_key);
+            }
+        }
+
+        $enabled = $this->state_manager->get_state_value('modules_enabled', []);
+        if (!is_array($enabled)) {
+            $enabled = [];
+        }
+        $enabled['ai'] = true;
+        $this->state_manager->update_state('modules_enabled', $enabled);
     }
 
     /**
@@ -534,6 +607,53 @@ class SetupWizard {
     }
 
     /**
+     * Persist integration credentials from the wizard auth step.
+     *
+     * Credentials are stored via StateManager secure storage (no central registry).
+     *
+     * @param array $data Sanitized request data.
+     */
+    private function persist_integration_credentials($data) {
+        if (!is_array($data)) {
+            return;
+        }
+
+        // Linear
+        if (class_exists('\\Newera\\Integrations\\Linear\\LinearManager')) {
+            $linear = new \Newera\Integrations\Linear\LinearManager($this->state_manager);
+
+            if (!empty($data['linear_api_key'])) {
+                $linear->set_api_key($data['linear_api_key']);
+            }
+
+            if (!empty($data['linear_webhook_secret'])) {
+                $linear->set_webhook_secret($data['linear_webhook_secret']);
+            }
+
+            if (!empty($data['linear_team_id'])) {
+                $linear->set_team_id($data['linear_team_id']);
+            }
+        }
+
+        // Notion
+        if (class_exists('\\Newera\\Integrations\\Notion\\NotionManager')) {
+            $notion = new \Newera\Integrations\Notion\NotionManager($this->state_manager);
+
+            if (!empty($data['notion_api_key'])) {
+                $notion->set_api_key($data['notion_api_key']);
+            }
+
+            if (!empty($data['notion_webhook_secret'])) {
+                $notion->set_webhook_secret($data['notion_webhook_secret']);
+            }
+
+            if (!empty($data['notion_projects_database_id'])) {
+                $notion->set_projects_database_id($data['notion_projects_database_id']);
+            }
+        }
+    }
+
+    /**
      * Sanitize step-specific data.
      *
      * Note: any sensitive values must be stored elsewhere (e.g. encrypted secure
@@ -548,6 +668,22 @@ class SetupWizard {
 
         switch ($step) {
             case 'auth':
+                $linear_configured = false;
+                if (class_exists('\\Newera\\Integrations\\Linear\\LinearManager')) {
+                    $linear = new \Newera\Integrations\Linear\LinearManager($this->state_manager);
+                    $linear_configured = method_exists($linear, 'is_configured') ? (bool) $linear->is_configured() : false;
+                }
+
+                $notion_configured = false;
+                if (class_exists('\\Newera\\Integrations\\Notion\\NotionManager')) {
+                    $notion = new \Newera\Integrations\Notion\NotionManager($this->state_manager);
+                    $notion_configured = method_exists($notion, 'is_configured') ? (bool) $notion->is_configured() : false;
+                }
+
+                $sanitized['linear_configured'] = $linear_configured;
+                $sanitized['linear_team_id'] = isset($data['linear_team_id']) ? sanitize_text_field($data['linear_team_id']) : '';
+                $sanitized['notion_configured'] = $notion_configured;
+                $sanitized['notion_projects_database_id'] = isset($data['notion_projects_database_id']) ? sanitize_text_field($data['notion_projects_database_id']) : '';
                 $supported_providers = ['email', 'magic_link', 'google', 'apple', 'github'];
 
                 $selected = isset($data['auth_providers']) && is_array($data['auth_providers']) ? $data['auth_providers'] : [];
@@ -595,8 +731,15 @@ class SetupWizard {
                 break;
 
             case 'ai':
-                $sanitized['provider'] = isset($data['provider']) ? sanitize_text_field($data['provider']) : '';
+                $sanitized['provider'] = isset($data['provider']) ? sanitize_key($data['provider']) : '';
                 $sanitized['model'] = isset($data['model']) ? sanitize_text_field($data['model']) : '';
+
+                $sanitized['max_requests_per_minute'] = isset($data['max_requests_per_minute']) ? (int) $data['max_requests_per_minute'] : 0;
+                $sanitized['monthly_token_quota'] = isset($data['monthly_token_quota']) ? (int) $data['monthly_token_quota'] : 0;
+                $sanitized['monthly_cost_quota_usd'] = isset($data['monthly_cost_quota_usd']) ? (float) $data['monthly_cost_quota_usd'] : 0;
+
+                // Do not store plaintext API keys in wizard state.
+                $sanitized['api_key_set'] = !empty($data['api_key']);
                 break;
 
             case 'intro':
