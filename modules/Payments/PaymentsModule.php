@@ -226,6 +226,36 @@ class PaymentsModule extends BaseModule {
     }
 
     /**
+     * Create a plan
+     * 
+     * @param array $params
+     * @return array
+     * @throws \Exception
+     */
+    public function createPlan($params) {
+        $name = $params['name'] ?? '';
+        $amount = $params['amount'] ?? 0;
+        $currency = $params['currency'] ?? 'USD';
+        
+        if (empty($name)) {
+            throw new \Exception('Plan name is required');
+        }
+        
+        $plans = $this->get_setting('plans', []);
+        $plan_id = uniqid('plan_');
+        $plans[$plan_id] = [
+            'name' => $name,
+            'amount' => $amount,
+            'currency' => $currency,
+            'created_at' => time()
+        ];
+        
+        $this->update_setting('plans', $plans);
+        
+        return ['message' => 'Plan created successfully', 'plan_id' => $plan_id];
+    }
+
+    /**
      * Register hooks only when active.
      */
     public function registerHooks() {

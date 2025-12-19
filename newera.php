@@ -64,6 +64,7 @@ require_once NEWERA_INCLUDES_PATH . 'Core/Logger.php';
 require_once NEWERA_INCLUDES_PATH . 'Database/DBAdapterInterface.php';
 require_once NEWERA_INCLUDES_PATH . 'Database/WPDBAdapter.php';
 require_once NEWERA_INCLUDES_PATH . 'Database/ExternalDBAdapter.php';
+require_once NEWERA_INCLUDES_PATH . 'Database/DBAdapterFactory.php';
 require_once NEWERA_INCLUDES_PATH . 'Database/RepositoryBase.php';
 require_once NEWERA_INCLUDES_PATH . 'Core/Crypto.php';
 
@@ -73,6 +74,10 @@ require_once NEWERA_INCLUDES_PATH . 'Payments/PlanManager.php';
 require_once NEWERA_INCLUDES_PATH . 'Payments/SubscriptionRepository.php';
 require_once NEWERA_INCLUDES_PATH . 'Payments/WebhookHandler.php';
 require_once NEWERA_INCLUDES_PATH . 'Payments/WebhookEndpoint.php';
+// Project tracking + integrations
+require_once NEWERA_INCLUDES_PATH . 'Projects/ProjectManager.php';
+require_once NEWERA_INCLUDES_PATH . 'Integrations/Linear/LinearManager.php';
+require_once NEWERA_INCLUDES_PATH . 'Integrations/Notion/NotionManager.php';
 
 // Module framework (auto-discovered modules live in /modules)
 require_once NEWERA_INCLUDES_PATH . 'Modules/ModuleInterface.php';
@@ -86,6 +91,7 @@ require_once NEWERA_INCLUDES_PATH . 'Database/MigrationRunner.php';
 require_once NEWERA_INCLUDES_PATH . 'Admin/AdminMenu.php';
 require_once NEWERA_INCLUDES_PATH . 'Admin/Dashboard.php';
 require_once NEWERA_INCLUDES_PATH . 'Admin/SetupWizard.php';
+require_once NEWERA_INCLUDES_PATH . 'AI/CommandHandler.php';
 
 /**
  * Plugin activation hook
@@ -105,6 +111,15 @@ function newera_activate() {
         // Schedule WP-Cron events placeholder
         if (!wp_next_scheduled('newera_daily_cleanup')) {
             wp_schedule_event(time(), 'daily', 'newera_daily_cleanup');
+        }
+
+        // Integration sync (best-effort; no-ops if integrations are not configured)
+        if (!wp_next_scheduled('newera_linear_sync_cron')) {
+            wp_schedule_event(time() + 300, 'hourly', 'newera_linear_sync_cron');
+        }
+
+        if (!wp_next_scheduled('newera_notion_sync_cron')) {
+            wp_schedule_event(time() + 300, 'hourly', 'newera_notion_sync_cron');
         }
         
         // Set activation flag
@@ -141,6 +156,8 @@ register_activation_hook(__FILE__, 'newera_activate');
 function newera_deactivate() {
     // Clear scheduled events
     wp_clear_scheduled_hook('newera_daily_cleanup');
+    wp_clear_scheduled_hook('newera_linear_sync_cron');
+    wp_clear_scheduled_hook('newera_notion_sync_cron');
     
     // Clear activation flag
     delete_transient('newera_activated');
