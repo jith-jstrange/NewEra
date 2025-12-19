@@ -1,0 +1,83 @@
+name: API Tests
+
+on:
+  push:
+    branches: [ main, develop, test-api-rest-graphql-comprehensive-auth-rate-limit-cors-webhooks ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Run API Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        php-version: ['7.4', '8.0', '8.1', '8.2']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-version }}
+        extensions: mbstring, json, openssl
+        coverage: xdebug
+    
+    - name: Validate composer.json
+      run: composer validate --strict
+    
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ matrix.php-version }}-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-${{ matrix.php-version }}-
+    
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress --no-interaction
+    
+    - name: Run REST API tests
+      run: vendor/bin/phpunit --testsuite="Newera Plugin Test Suite" --filter RESTControllerTest --testdox
+    
+    - name: Run Authentication tests
+      run: vendor/bin/phpunit --testsuite="Newera Plugin Test Suite" --filter AuthManagerTest --testdox
+    
+    - name: Run Middleware tests (CORS, Rate Limiting)
+      run: vendor/bin/phpunit --testsuite="Newera Plugin Test Suite" --filter MiddlewareManagerTest --testdox
+    
+    - name: Run Webhook tests
+      run: vendor/bin/phpunit --testsuite="Newera Plugin Test Suite" --filter WebhookManagerTest --testdox
+    
+    - name: Run GraphQL tests
+      run: vendor/bin/phpunit --testsuite="Newera Plugin Test Suite" --filter GraphQLControllerTest --testdox
+    
+    - name: Run all tests with coverage
+      run: vendor/bin/phpunit --coverage-clover coverage.xml --coverage-text
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml
+        flags: api-tests
+        name: api-coverage
+        fail_ci_if_error: false
+
+  test-summary:
+    name: Test Summary
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Check test results
+      run: |
+        if [ "${{ needs.test.result }}" == "success" ]; then
+          echo "✓ All API tests passed successfully!"
+        else
+          echo "✗ Some tests failed"
+          exit 1
+        fi
