@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'newera-performance'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'wordpress'
+    static_configs:
+      - targets: ['wordpress:80']
+    metrics_path: '/wp-json/newera/v1/metrics'
+    scrape_interval: 5s
+    scrape_timeout: 5s
+
+  - job_name: 'database'
+    static_configs:
+      - targets: ['db:3306']
+    scrape_interval: 15s

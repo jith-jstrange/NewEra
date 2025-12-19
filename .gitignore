@@ -43,3 +43,9 @@ wp-content/newera-logs/newera.log
 # Backup files
 *.bak
 *.backup
+
+# Performance testing results
+perf/results/
+perf/baseline_results_*.json
+perf/jmeter.log
+perf/*.jtl
