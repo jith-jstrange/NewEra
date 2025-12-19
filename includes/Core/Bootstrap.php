@@ -77,6 +77,16 @@ class Bootstrap {
      * @var \Newera\Integrations\Notion\NotionManager
      */
     private $notion_manager;
+     * API Manager instance
+     *
+     * @var \Newera\API\APIManager
+     */
+    private $api_manager;
+     * DB Adapter Factory instance
+     *
+     * @var \Newera\Database\DBAdapterFactory
+     */
+    private $db_factory;
 
     /**
      * Get instance of Bootstrap
@@ -109,12 +119,21 @@ class Bootstrap {
         $this->init_module_registry();
         $this->init_admin_menu();
 
+        $this->init_db_factory();
+        $this->init_module_registry();
+        $this->init_admin_menu();
+        
+        // Initialize API Manager
+        $this->init_api_manager();
+        
         // Boot discovered modules
         $this->init_modules();
 
         // Expose services to other components
         $this->expose_state_manager();
 
+        $this->expose_services();
+        
         // Log initialization
         $this->logger->info('Newera plugin initialized successfully');
 
@@ -163,6 +182,10 @@ class Bootstrap {
             $this->notion_manager = new \Newera\Integrations\Notion\NotionManager($this->state_manager, $this->logger, $this->project_manager);
             $this->notion_manager->init();
         }
+     * Initialize the DB Adapter Factory
+     */
+    private function init_db_factory() {
+        $this->db_factory = new \Newera\Database\DBAdapterFactory($this->state_manager, $this->logger);
     }
 
     /**
@@ -184,6 +207,19 @@ class Bootstrap {
             $this->setup_wizard = new \Newera\Admin\SetupWizard($this->state_manager);
             $this->setup_wizard->init();
         }
+    }
+
+    /**
+     * Initialize API Manager
+     */
+    private function init_api_manager() {
+        $api_manager = new \Newera\API\APIManager();
+        $api_manager->init();
+        
+        // Store API manager instance
+        $this->api_manager = $api_manager;
+        
+        $this->logger->info('API Manager initialized successfully');
     }
 
     /**
@@ -256,12 +292,18 @@ class Bootstrap {
      */
     public function get_notion_manager() {
         return $this->notion_manager;
+     * Get DB Adapter Factory
+     *
+     * @return \Newera\Database\DBAdapterFactory
+     */
+    public function get_db_factory() {
+        return $this->db_factory;
     }
     
     /**
      * Expose core services to other components via filters.
      */
-    private function expose_state_manager() {
+    private function expose_services() {
         add_filter('newera_get_state_manager', function() {
             return $this->get_state_manager();
         });
@@ -284,6 +326,8 @@ class Bootstrap {
 
         add_filter('newera_get_notion_manager', function() {
             return $this->get_notion_manager();
+        add_filter('newera_get_db_factory', function() {
+            return $this->get_db_factory();
         });
 
         if (!function_exists('newera_get_state_manager')) {
@@ -319,6 +363,9 @@ class Bootstrap {
         if (!function_exists('newera_get_notion_manager')) {
             function newera_get_notion_manager() {
                 return apply_filters('newera_get_notion_manager', null);
+        if (!function_exists('newera_get_db_factory')) {
+            function newera_get_db_factory() {
+                return apply_filters('newera_get_db_factory', null);
             }
         }
 

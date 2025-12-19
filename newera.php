@@ -64,6 +64,7 @@ require_once NEWERA_INCLUDES_PATH . 'Core/Logger.php';
 require_once NEWERA_INCLUDES_PATH . 'Database/DBAdapterInterface.php';
 require_once NEWERA_INCLUDES_PATH . 'Database/WPDBAdapter.php';
 require_once NEWERA_INCLUDES_PATH . 'Database/ExternalDBAdapter.php';
+require_once NEWERA_INCLUDES_PATH . 'Database/DBAdapterFactory.php';
 require_once NEWERA_INCLUDES_PATH . 'Database/RepositoryBase.php';
 require_once NEWERA_INCLUDES_PATH . 'Core/Crypto.php';
 
