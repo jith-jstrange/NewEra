@@ -23,6 +23,13 @@ define('NEWERA_VERSION', '1.0.0');
 define('NEWERA_PLUGIN_FILE', __DIR__ . '/../newera.php');
 define('NEWERA_PLUGIN_PATH', __DIR__ . '/../');
 define('NEWERA_INCLUDES_PATH', __DIR__ . '/../includes/');
+define('NEWERA_MODULES_PATH', __DIR__ . '/../modules/');
+define('NEWERA_TEMPLATES_PATH', __DIR__ . '/../templates/');
+
+// WordPress constants for testing
+define('WP_CONTENT_DIR', sys_get_temp_dir() . '/wp-content');
+define('WP_DEBUG_LOG', true);
+define('HOUR_IN_SECONDS', 3600);
 
 // Mock WordPress functions used in the classes
 if (!function_exists('get_site_option')) {
@@ -90,8 +97,123 @@ if (!function_exists('current_time')) {
     }
 }
 
+if (!function_exists('wp_generate_password')) {
+    function wp_generate_password($length = 12, $special_chars = true, $extra_special_chars = false) {
+        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        if ($special_chars) {
+            $chars .= '!@#$%^&*()-_=+[]{}|;:,.<>?';
+        }
+        $password = '';
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $chars[random_int(0, strlen($chars) - 1)];
+        }
+        return $password;
+    }
+}
+
+if (!function_exists('sanitize_text_field')) {
+    function sanitize_text_field($str) {
+        return trim(strip_tags($str));
+    }
+}
+
+if (!function_exists('sanitize_email')) {
+    function sanitize_email($email) {
+        return filter_var($email, FILTER_SANITIZE_EMAIL);
+    }
+}
+
+if (!function_exists('esc_html')) {
+    function esc_html($text) {
+        return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+    }
+}
+
+if (!function_exists('esc_attr')) {
+    function esc_attr($text) {
+        return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+    }
+}
+
+if (!function_exists('esc_url')) {
+    function esc_url($url, $protocols = null) {
+        if (preg_match('/^(javascript|data|vbscript):/i', $url)) {
+            return '';
+        }
+        return $url;
+    }
+}
+
+if (!function_exists('esc_sql')) {
+    function esc_sql($data) {
+        if (is_array($data)) {
+            return array_map(__FUNCTION__, $data);
+        }
+        return addslashes($data);
+    }
+}
+
+if (!function_exists('wp_kses_post')) {
+    function wp_kses_post($string) {
+        return strip_tags($string, '<p><div><span><a><b><i><strong><em>');
+    }
+}
+
+if (!function_exists('wp_mkdir_p')) {
+    function wp_mkdir_p($pathname, $mode = 0777) {
+        return @mkdir($pathname, $mode, true);
+    }
+}
+
+if (!function_exists('get_site_url')) {
+    function get_site_url() {
+        return 'http://example.com';
+    }
+}
+
+if (!function_exists('get_user_by')) {
+    function get_user_by($field, $value) {
+        // Mock function - returns null in tests
+        return null;
+    }
+}
+
+if (!function_exists('user_can')) {
+    function user_can($user_id, $capability) {
+        return false;
+    }
+}
+
+if (!function_exists('set_transient')) {
+    function set_transient($transient, $value, $expiration = 0) {
+        \Newera\Tests\MockStorage::update_option('transient_' . $transient, [
+            'value' => $value,
+            'expiration' => time() + $expiration
+        ]);
+        return true;
+    }
+}
+
+if (!function_exists('get_transient')) {
+    function get_transient($transient) {
+        $data = \Newera\Tests\MockStorage::get_option('transient_' . $transient);
+        if (!$data || (isset($data['expiration']) && $data['expiration'] < time())) {
+            return false;
+        }
+        return isset($data['value']) ? $data['value'] : false;
+    }
+}
+
+if (!function_exists('get_http_header')) {
+    function get_http_header($header_name) {
+        $server_key = 'HTTP_' . strtoupper(str_replace('-', '_', $header_name));
+        return isset($_SERVER[$server_key]) ? $_SERVER[$server_key] : null;
+    }
+}
+
 // Load the classes to test
 require_once __DIR__ . '/../includes/Core/Crypto.php';
 require_once __DIR__ . '/../includes/Core/StateManager.php';
+require_once __DIR__ . '/../includes/Core/Logger.php';
 require_once __DIR__ . '/TestCase.php';
 require_once __DIR__ . '/MockStorage.php';
