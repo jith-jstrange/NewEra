@@ -65,6 +65,8 @@ class SubscriptionRepository {
                 'start_date' => $data['start_date'],
                 'end_date' => $data['end_date'],
                 'auto_renew' => intval($data['auto_renew']),
+                'stripe_subscription_id' => !empty($data['stripe_subscription_id']) ? sanitize_text_field($data['stripe_subscription_id']) : null,
+                'stripe_customer_id' => !empty($data['stripe_customer_id']) ? sanitize_text_field($data['stripe_customer_id']) : null,
                 'created_at' => $data['created_at'],
                 'updated_at' => $data['updated_at'],
             ],
@@ -77,6 +79,8 @@ class SubscriptionRepository {
                 '%s',
                 '%s',
                 '%d',
+                '%s',
+                '%s',
                 '%s',
                 '%s',
             ]
@@ -100,6 +104,26 @@ class SubscriptionRepository {
         ));
 
         return $result;
+    }
+
+    /**
+     * Get a subscription by Stripe subscription id.
+     *
+     * @param string $stripe_subscription_id
+     * @return object|null
+     */
+    public function get_by_stripe_subscription_id($stripe_subscription_id) {
+        global $wpdb;
+
+        $stripe_subscription_id = sanitize_text_field((string) $stripe_subscription_id);
+        if ($stripe_subscription_id === '') {
+            return null;
+        }
+
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table} WHERE stripe_subscription_id = %s AND deleted_at IS NULL",
+            $stripe_subscription_id
+        ));
     }
 
     /**

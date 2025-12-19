@@ -244,6 +244,12 @@ class BetterAuthManager {
             'callback' => [$this, 'rest_callback'],
         ]);
 
+        register_rest_route(self::REST_NAMESPACE, '/auth/mock-authorize/(?P<provider>[a-z_\-]+)', [
+            'methods' => 'GET',
+            'permission_callback' => '__return_true',
+            'callback' => [$this, 'rest_mock_authorize'],
+        ]);
+
         register_rest_route(self::REST_NAMESPACE, '/auth/session', [
             'methods' => 'GET',
             'permission_callback' => function() {
@@ -285,6 +291,31 @@ class BetterAuthManager {
             return new \WP_Error('newera_auth_not_configured', __('Provider is not configured on this site.', 'newera'), ['status' => 400]);
         }
 
+        if ($this->is_e2e_mode()) {
+            $email = $request->get_param('email');
+            $email = is_string($email) ? sanitize_email($email) : '';
+            if (!is_email($email)) {
+                $email = 'client@example.com';
+            }
+
+            $redirect_to = $request->get_param('redirect_to');
+            $redirect_to = is_string($redirect_to) ? esc_url_raw($redirect_to) : '';
+            if ($redirect_to === '') {
+                $redirect_to = home_url('/');
+            }
+
+            $auth_url = add_query_arg([
+                'email' => $email,
+                'redirect_to' => $redirect_to,
+            ], rest_url(self::REST_NAMESPACE . '/auth/mock-authorize/' . $provider));
+
+            return [
+                'provider' => $provider,
+                'redirect_uri' => $redirect_uri,
+                'authorization_url' => $auth_url,
+            ];
+        }
+
         $auth_url = $this->build_authorization_url($provider, $redirect_uri);
 
         if ($auth_url === '') {
@@ -296,6 +327,54 @@ class BetterAuthManager {
             'redirect_uri' => $redirect_uri,
             'authorization_url' => $auth_url,
         ];
+    }
+
+    /**
+     * Mock authorize endpoint for E2E/integration testing.
+     *
+     * In E2E mode, we cannot hit external OAuth providers. This endpoint simulates
+     * a provider approval page by redirecting directly to our callback.
+     *
+     * Query params:
+     * - email
+     * - redirect_to
+     */
+    public function rest_mock_authorize($request) {
+        if (!$this->is_e2e_mode()) {
+            return new \WP_Error('newera_auth_mock_disabled', __('Mock auth is disabled.', 'newera'), ['status' => 404]);
+        }
+
+        $provider = sanitize_key($request['provider']);
+        $providers = $this->get_supported_providers();
+        if (!isset($providers[$provider])) {
+            return new \WP_Error('newera_auth_provider', __('Unsupported auth provider.', 'newera'), ['status' => 400]);
+        }
+
+        $email = $request->get_param('email');
+        $email = is_string($email) ? sanitize_email($email) : '';
+        if (!is_email($email)) {
+            $email = 'client@example.com';
+        }
+
+        $redirect_to = $request->get_param('redirect_to');
+        $redirect_to = is_string($redirect_to) ? esc_url_raw($redirect_to) : '';
+        if ($redirect_to === '') {
+            $redirect_to = home_url('/');
+        }
+
+        $token = function_exists('wp_generate_password')
+            ? wp_generate_password(32, false, false)
+            : bin2hex(random_bytes(16));
+
+        $callback_url = add_query_arg([
+            'token' => $token,
+            'email' => $email,
+            'redirect_to' => $redirect_to,
+        ], rest_url(self::REST_NAMESPACE . '/auth/callback/' . $provider));
+
+        $response = new \WP_REST_Response(null, 302);
+        $response->header('Location', $callback_url);
+        return $response;
     }
 
     /**
@@ -325,6 +404,19 @@ class BetterAuthManager {
 
             $this->login_user($user->ID);
             $this->store_user_jwt($user->ID, $token);
+
+            $redirect_to = $request->get_param('redirect_to');
+            $redirect_to = is_string($redirect_to) ? $redirect_to : '';
+
+            if ($redirect_to !== '') {
+                $safe = function_exists('wp_validate_redirect')
+                    ? wp_validate_redirect($redirect_to, home_url('/'))
+                    : $redirect_to;
+
+                $response = new \WP_REST_Response(null, 302);
+                $response->header('Location', $safe);
+                return $response;
+            }
 
             return [
                 'status' => 'ok',
@@ -591,6 +683,13 @@ class BetterAuthManager {
             default:
                 return '';
         }
+    }
+
+    /**
+     * @return bool
+     */
+    private function is_e2e_mode() {
+        return function_exists('newera_is_e2e_mode') && newera_is_e2e_mode();
     }
 
     /**

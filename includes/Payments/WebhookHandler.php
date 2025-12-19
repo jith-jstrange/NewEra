@@ -157,13 +157,15 @@ class WebhookHandler {
                 'client_id' => $client_id,
                 'plan' => $plan,
                 'status' => $status,
-                'amount' => isset($subscription['items']['data'][0]['price']['unit_amount']) ? 
+                'amount' => isset($subscription['items']['data'][0]['price']['unit_amount']) ?
                     $subscription['items']['data'][0]['price']['unit_amount'] / 100 : 0,
                 'billing_cycle' => isset($subscription['items']['data'][0]['price']['recurring']['interval']) ?
                     $subscription['items']['data'][0]['price']['recurring']['interval'] : 'month',
                 'start_date' => date('Y-m-d', $subscription['current_period_start'] ?? time()),
                 'end_date' => date('Y-m-d', $subscription['current_period_end'] ?? time()),
                 'auto_renew' => 1,
+                'stripe_subscription_id' => $subscription['id'],
+                'stripe_customer_id' => $customer_id,
             ]);
 
             if ($result) {
@@ -199,9 +201,16 @@ class WebhookHandler {
                 return false;
             }
 
-            // Find subscription by Stripe ID (would need to store this mapping)
             $stripe_subscription_id = $subscription['id'];
             $status = $subscription['status'] ?? 'active';
+
+            $existing = $this->subscription_repo->get_by_stripe_subscription_id($stripe_subscription_id);
+            if ($existing) {
+                $this->subscription_repo->update((int) $existing->id, [
+                    'status' => sanitize_text_field($status),
+                    'end_date' => !empty($subscription['current_period_end']) ? date('Y-m-d', (int) $subscription['current_period_end']) : null,
+                ]);
+            }
 
             $this->logger->info('Subscription updated from webhook', [
                 'stripe_subscription_id' => $stripe_subscription_id,
@@ -233,6 +242,15 @@ class WebhookHandler {
             }
 
             $stripe_subscription_id = $subscription['id'];
+
+            $existing = $this->subscription_repo->get_by_stripe_subscription_id($stripe_subscription_id);
+            if ($existing) {
+                $this->subscription_repo->update((int) $existing->id, [
+                    'status' => 'cancelled',
+                    'auto_renew' => 0,
+                    'deleted_at' => current_time('mysql'),
+                ]);
+            }
 
             $this->logger->info('Subscription deleted from webhook', [
                 'stripe_subscription_id' => $stripe_subscription_id,
