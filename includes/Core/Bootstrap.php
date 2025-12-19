@@ -63,6 +63,11 @@ class Bootstrap {
      * @var \Newera\API\APIManager
      */
     private $api_manager;
+     * DB Adapter Factory instance
+     *
+     * @var \Newera\Database\DBAdapterFactory
+     */
+    private $db_factory;
 
     /**
      * Get instance of Bootstrap
@@ -90,6 +95,7 @@ class Bootstrap {
         // Initialize components
         $this->init_logger();
         $this->init_state_manager();
+        $this->init_db_factory();
         $this->init_module_registry();
         $this->init_admin_menu();
         
@@ -100,7 +106,7 @@ class Bootstrap {
         $this->init_modules();
         
         // Expose services to other components
-        $this->expose_state_manager();
+        $this->expose_services();
         
         // Log initialization
         $this->logger->info('Newera plugin initialized successfully');
@@ -125,6 +131,13 @@ class Bootstrap {
     private function init_state_manager() {
         $this->state_manager = new StateManager();
         $this->state_manager->init();
+    }
+
+    /**
+     * Initialize the DB Adapter Factory
+     */
+    private function init_db_factory() {
+        $this->db_factory = new \Newera\Database\DBAdapterFactory($this->state_manager, $this->logger);
     }
 
     /**
@@ -205,11 +218,20 @@ class Bootstrap {
     public function get_logger() {
         return $this->logger;
     }
+
+    /**
+     * Get DB Adapter Factory
+     *
+     * @return \Newera\Database\DBAdapterFactory
+     */
+    public function get_db_factory() {
+        return $this->db_factory;
+    }
     
     /**
      * Expose core services to other components via filters.
      */
-    private function expose_state_manager() {
+    private function expose_services() {
         add_filter('newera_get_state_manager', function() {
             return $this->get_state_manager();
         });
@@ -220,6 +242,10 @@ class Bootstrap {
 
         add_filter('newera_get_module_registry', function() {
             return $this->get_modules_registry();
+        });
+
+        add_filter('newera_get_db_factory', function() {
+            return $this->get_db_factory();
         });
 
         if (!function_exists('newera_get_state_manager')) {
@@ -237,6 +263,12 @@ class Bootstrap {
         if (!function_exists('newera_get_module_registry')) {
             function newera_get_module_registry() {
                 return apply_filters('newera_get_module_registry', null);
+            }
+        }
+
+        if (!function_exists('newera_get_db_factory')) {
+            function newera_get_db_factory() {
+                return apply_filters('newera_get_db_factory', null);
             }
         }
 

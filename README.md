@@ -15,12 +15,16 @@ Newera is a foundational WordPress plugin scaffold that provides a robust archit
 - **WP-Cron Integration** for scheduled tasks
 - **Security Best Practices** with capability checks and nonce validation
 - **🔒 Secure Credential Storage** with AES-256-CBC encryption
+- **🗄️ Dual-Mode Database Support** with external PostgreSQL/Neon/Supabase support
+- **🔄 Automatic Fallback** to WordPress DB if external database fails
+- **📊 Database Health Monitoring** with real-time connection metrics
 
 ## Requirements
 
 - WordPress 5.0 or higher
 - PHP 7.4 or higher
-- MySQL 5.6 or higher
+- MySQL 5.6 or higher (or PostgreSQL 10+ for external database support)
+- PHP PDO extension with pdo_pgsql driver (optional, for external database support)
 
 ## Installation
 
@@ -82,7 +86,8 @@ newera/
 │   ├── Database/          # Database functionality
 │   │   ├── DBAdapterInterface.php # Database adapter contract
 │   │   ├── WPDBAdapter.php # WordPress database adapter
-│   │   ├── ExternalDBAdapter.php # External database stub
+│   │   ├── ExternalDBAdapter.php # External PostgreSQL database adapter
+│   │   ├── DBAdapterFactory.php # Adapter factory with fallback logic
 │   │   ├── RepositoryBase.php # Repository base class
 │   │   └── MigrationRunner.php # Migration system
 │   ├── Admin/             # Admin interface
@@ -220,16 +225,17 @@ class ExampleModule extends BaseModule {
 
 ### Using Database Adapters
 
-The plugin provides a database abstraction layer for flexible data access:
+The plugin provides a dual-mode database abstraction layer with support for WordPress database or external PostgreSQL-compatible databases (including Neon and Supabase):
+
+#### WordPress Database Mode (Default)
 
 ```php
 <?php
 namespace Newera\Modules;
 
 use Newera\Database\WPDBAdapter;
-use Newera\Database\RepositoryBase;
 
-// Initialize the database adapter
+// Initialize the WordPress database adapter
 $db = new WPDBAdapter();
 
 // Test connection
@@ -240,6 +246,96 @@ if ($db->test_connection()) {
 // Get connection info
 $status = $db->get_connection_status();
 ```
+
+#### External Database Mode (PostgreSQL/Neon/Supabase)
+
+The plugin supports external PostgreSQL-compatible databases with automatic failover:
+
+```php
+<?php
+use Newera\Database\DBAdapterFactory;
+
+// Get the database factory
+$db_factory = apply_filters('newera_get_db_factory', null);
+
+// Or get it from Bootstrap
+$bootstrap = \Newera\Core\Bootstrap::getInstance();
+$db_factory = $bootstrap->get_db_factory();
+
+// Get the active adapter (automatically selects WordPress or External)
+$db = $db_factory->get_adapter();
+
+// The adapter will automatically fall back to WordPress DB if external connection fails
+if ($db_factory->is_fallback_active()) {
+    echo "Using WordPress database as fallback";
+}
+
+// Get health metrics
+$health = $db_factory->get_health_metrics();
+print_r($health);
+```
+
+#### External Database Configuration
+
+To configure an external database, use the Setup Wizard or configure it programmatically:
+
+**Via Setup Wizard:**
+1. Navigate to Newera > Setup Wizard
+2. Go to the Database step
+3. Select "External Database (PostgreSQL/Neon/Supabase)"
+4. Enter your connection string: `postgresql://user:password@host:port/database?sslmode=require`
+5. Test the connection
+6. Save and continue - migrations will run automatically
+
+**Connection String Formats:**
+```
+# Standard PostgreSQL
+postgresql://username:password@localhost:5432/mydb
+
+# Neon
+postgresql://user:pass@ep-cool-cloud-123456.us-east-2.aws.neon.tech/neondb?sslmode=require
+
+# Supabase
+postgresql://postgres:pass@db.abcdefghijklmn.supabase.co:5432/postgres
+
+# With SSL mode
+postgresql://user:pass@host:5432/db?sslmode=require
+```
+
+**Programmatic Configuration:**
+```php
+<?php
+$db_factory = apply_filters('newera_get_db_factory', null);
+
+// Test a connection string
+$result = $db_factory->test_connection('postgresql://user:pass@host:5432/db');
+if ($result['success']) {
+    echo "Connection successful!";
+    print_r($result['details']);
+}
+
+// Save configuration
+$config = [
+    'db_type' => 'external',
+    'connection_string' => 'postgresql://user:pass@host:5432/db',
+    'table_prefix' => 'wp_',
+    'persistent' => false
+];
+$db_factory->save_configuration($config);
+
+// Run migrations on external database
+$db_factory->run_external_migrations();
+```
+
+#### Database Features
+
+- **Automatic Fallback:** If external database connection fails, automatically falls back to WordPress database
+- **Connection Pooling:** Supports persistent connections for improved performance
+- **Health Monitoring:** Real-time connection status and metrics in dashboard
+- **Schema Conversion:** Automatic MySQL to PostgreSQL syntax conversion
+- **Secure Credentials:** Connection strings encrypted with AES-256-CBC
+- **Idempotent Migrations:** Safe to run migrations multiple times
+- **Transaction Support:** Full BEGIN/COMMIT/ROLLBACK support
 
 ### Creating Repositories
 
