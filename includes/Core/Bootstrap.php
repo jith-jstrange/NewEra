@@ -58,6 +58,11 @@ class Bootstrap {
     private $setup_wizard;
 
     /**
+     * AI Command Handler instance
+     *
+     * @var \Newera\AI\CommandHandler
+     */
+    private $command_handler;
      * Project Manager instance.
      *
      * @var \Newera\Projects\ProjectManager
@@ -122,6 +127,7 @@ class Bootstrap {
         $this->init_db_factory();
         $this->init_module_registry();
         $this->init_admin_menu();
+        $this->init_command_handler();
         
         // Initialize API Manager
         $this->init_api_manager();
@@ -210,6 +216,11 @@ class Bootstrap {
     }
 
     /**
+     * Initialize Command Handler
+     */
+    private function init_command_handler() {
+        $this->command_handler = new \Newera\AI\CommandHandler($this->state_manager, $this->logger, $this->module_registry);
+        $this->command_handler->init();
      * Initialize API Manager
      */
     private function init_api_manager() {
