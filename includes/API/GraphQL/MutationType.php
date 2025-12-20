@@ -110,7 +110,7 @@ class MutationType extends ObjectType {
                     'args' => [
                         'id' => [
                             'type' => \GraphQL\Type\Definition\NonNullType::getInstance(
-                                \GraphQL<Type\Definition\IDType>::getInstance()
+                                \GraphQL\Type\Definition\IDType::getInstance()
                             ),
                             'description' => 'Project ID'
                         ]
@@ -166,7 +166,7 @@ class MutationType extends ObjectType {
                     'description' => 'Delete a webhook',
                     'args' => [
                         'id' => [
-                            'type' => \GraphQL<Type\Definition\IDType>::getInstance()
+                            'type' => \GraphQL\Type\Definition\IDType::getInstance()
                         ]
                     ],
                     'resolve' => [$this, 'resolve_delete_webhook']
