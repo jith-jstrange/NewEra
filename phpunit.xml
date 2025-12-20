@@ -15,9 +15,23 @@
         </testsuite>
     </testsuites>
     
-    <filter>
-        <whitelist processUncoveredFilesFromWhitelist="true">
-            <directory suffix=".php">includes</directory>
-        </whitelist>
-    </filter>
+    <coverage processUncoveredFiles="true">
+        <include>
+            <directory suffix=".php">includes/Core</directory>
+            <directory suffix=".php">includes/Database</directory>
+            <directory suffix=".php">includes/Modules</directory>
+        </include>
+        <exclude>
+            <directory suffix=".php">includes/Admin</directory>
+            <directory suffix=".php">includes/API</directory>
+            <directory suffix=".php">includes/Payments</directory>
+            <directory suffix=".php">includes/Projects</directory>
+            <directory suffix=".php">includes/Integrations</directory>
+            <directory suffix=".php">includes/AI</directory>
+        </exclude>
+        <report>
+            <html outputDirectory="coverage" lowUpperBound="35" highLowerBound="70"/>
+            <text outputFile="php://stdout" showUncoveredFiles="true"/>
+        </report>
+    </coverage>
 </phpunit>

@@ -1,0 +1,126 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ main, develop, unit-tests/** ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        php-version: ['7.4', '8.0', '8.1', '8.2']
+    
+    name: PHP ${{ matrix.php-version }} Tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-version }}
+        extensions: openssl, json, mbstring
+        coverage: xdebug
+    
+    - name: Validate composer.json
+      run: composer validate --strict
+    
+    - name: Cache Composer packages
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ matrix.php-version }}-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-${{ matrix.php-version }}-
+    
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress --no-suggest
+    
+    - name: Run unit tests
+      run: composer test
+    
+    - name: Check test execution time
+      run: |
+        START_TIME=$(date +%s)
+        composer test
+        END_TIME=$(date +%s)
+        ELAPSED=$((END_TIME - START_TIME))
+        if [ $ELAPSED -gt 300 ]; then
+          echo "::warning::Tests took ${ELAPSED}s, which exceeds the 5-minute target"
+        fi
+    
+    - name: Generate coverage report
+      if: matrix.php-version == '8.1'
+      run: |
+        composer test-coverage
+        echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+        cat coverage.txt >> $GITHUB_STEP_SUMMARY || echo "Coverage report not generated" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Upload coverage to Codecov
+      if: matrix.php-version == '8.1'
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+    
+    - name: Check coverage threshold
+      if: matrix.php-version == '8.1'
+      run: |
+        COVERAGE=$(vendor/bin/phpunit --coverage-text | grep "Lines:" | awk '{print $2}' | sed 's/%//')
+        echo "Coverage: ${COVERAGE}%"
+        if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+          echo "::error::Coverage ${COVERAGE}% is below 80% threshold"
+          exit 1
+        fi
+        echo "::notice::Coverage ${COVERAGE}% meets the 80% threshold"
+    
+    - name: Archive coverage results
+      if: matrix.php-version == '8.1'
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage/
+        retention-days: 30
+
+  coverage-summary:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: openssl, json, mbstring
+        coverage: xdebug
+    
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress
+    
+    - name: Generate coverage report
+      run: composer test-coverage
+    
+    - name: Comment PR with coverage
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const coverage = fs.readFileSync('coverage.txt', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## Test Coverage Report\n\`\`\`\n${coverage}\n\`\`\``
+          });
