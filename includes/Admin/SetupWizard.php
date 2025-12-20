@@ -765,6 +765,9 @@ class SetupWizard {
                 $stripe_manager->setup_wizard_completed();
             }
         }
+    }
+
+    /**
      * Mask (remove) sensitive data before persisting wizard state.
      *
      * @param string $step Step id.
