@@ -96,6 +96,11 @@ require_once NEWERA_INCLUDES_PATH . 'AI/CommandHandler.php';
 // API endpoints
 require_once NEWERA_INCLUDES_PATH . 'API/HealthCheck.php';
 
+// Security features
+require_once NEWERA_INCLUDES_PATH . 'Security/SecurityHeaders.php';
+require_once NEWERA_INCLUDES_PATH . 'Security/RateLimiter.php';
+require_once NEWERA_INCLUDES_PATH . 'Security/CORS.php';
+
 /**
  * Plugin activation hook
  */
