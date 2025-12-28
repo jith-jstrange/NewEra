@@ -2,6 +2,9 @@
  * Newera Plugin Admin JavaScript
  */
 
+// Import CSS for webpack bundling
+import '../css/admin.css';
+
 (function($) {
     'use strict';
 

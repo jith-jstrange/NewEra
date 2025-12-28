@@ -68,7 +68,10 @@ class CORS {
     private static function get_allowed_origins() {
         $default_origins = [get_site_url(), get_home_url()];
 
-        if (defined('WP_DEBUG') && WP_DEBUG) {
+        // Allow localhost only in development environment
+        // Use NEWERA_ENV instead of WP_DEBUG to prevent accidental production exposure
+        $is_dev = defined('NEWERA_ENV') && NEWERA_ENV === 'development';
+        if ($is_dev) {
             $default_origins[] = 'http://localhost:3000';
             $default_origins[] = 'http://localhost:8080';
             $default_origins[] = 'http://localhost:8081';

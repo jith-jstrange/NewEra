@@ -9,7 +9,6 @@ module.exports = (env, argv) => {
   return {
     entry: {
       admin: './includes/Assets/js/admin.js',
-      'admin-styles': './includes/Assets/css/admin.css',
     },
     output: {
       path: path.resolve(__dirname, 'dist'),

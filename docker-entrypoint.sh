@@ -19,12 +19,29 @@ echo "✅ Database is ready!"
 if ! wp core is-installed --allow-root 2>/dev/null; then
     echo "📦 Installing WordPress..."
     
+    # Get admin credentials from environment or prompt
+    ADMIN_USER="${WORDPRESS_ADMIN_USER:-}"
+    ADMIN_PASS="${WORDPRESS_ADMIN_PASSWORD:-}"
+    ADMIN_EMAIL="${WORDPRESS_ADMIN_EMAIL:-admin@example.com}"
+    
+    # Require secure credentials - don't use defaults
+    if [ -z "$ADMIN_USER" ] || [ -z "$ADMIN_PASS" ]; then
+        echo "⚠️  WARNING: WordPress admin credentials not set!"
+        echo "Please set WORDPRESS_ADMIN_USER and WORDPRESS_ADMIN_PASSWORD in your .env file"
+        echo "Using temporary credentials - CHANGE IMMEDIATELY after installation!"
+        ADMIN_USER="admin_$(date +%s)"  # Add timestamp to avoid 'admin'
+        ADMIN_PASS="$(openssl rand -base64 16)"  # Generate random password
+        echo "Temporary admin username: $ADMIN_USER"
+        echo "Temporary admin password: $ADMIN_PASS"
+        echo "SAVE THESE CREDENTIALS!"
+    fi
+    
     wp core install \
         --url="${WORDPRESS_URL:-http://localhost:8080}" \
         --title="${WORDPRESS_TITLE:-Newera Plugin Demo}" \
-        --admin_user="${WORDPRESS_ADMIN_USER:-admin}" \
-        --admin_password="${WORDPRESS_ADMIN_PASSWORD:-admin}" \
-        --admin_email="${WORDPRESS_ADMIN_EMAIL:-admin@example.com}" \
+        --admin_user="$ADMIN_USER" \
+        --admin_password="$ADMIN_PASS" \
+        --admin_email="$ADMIN_EMAIL" \
         --skip-email \
         --allow-root
     

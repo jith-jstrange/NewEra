@@ -81,14 +81,32 @@ class RateLimiter {
 
     private static function get_client_ip() {
         $ip = '';
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-            $ip = $_SERVER['HTTP_CLIENT_IP'];
-        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+        
+        // Check if behind a trusted proxy (configure via filter)
+        $trusted_proxies = apply_filters('newera_trusted_proxies', []);
+        $is_trusted_proxy = false;
+        
+        if (!empty($_SERVER['REMOTE_ADDR'])) {
+            $remote_addr = $_SERVER['REMOTE_ADDR'];
+            foreach ($trusted_proxies as $proxy) {
+                if (strpos($remote_addr, $proxy) === 0) {
+                    $is_trusted_proxy = true;
+                    break;
+                }
+            }
+        }
+        
+        // Use forwarded IP only if from trusted proxy
+        if ($is_trusted_proxy && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            // Get first IP from chain (original client)
+            $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+            $ip = trim($ips[0]);
         } elseif (!empty($_SERVER['REMOTE_ADDR'])) {
+            // Use direct connection IP
             $ip = $_SERVER['REMOTE_ADDR'];
         }
         
+        // Validate and sanitize IP
         $ip = filter_var($ip, FILTER_VALIDATE_IP);
         return $ip ? $ip : '0.0.0.0';
     }
