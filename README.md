@@ -1,72 +1,190 @@
 # Newera WordPress Plugin
 
-A modern WordPress plugin with comprehensive bootstrap and module architecture.
+<div align="center">
 
-## Overview
+![WordPress Plugin](https://img.shields.io/badge/WordPress-5.0+-blue.svg)
+![PHP Version](https://img.shields.io/badge/PHP-7.4+-purple.svg)
+![License](https://img.shields.io/badge/License-GPL%20v2-green.svg)
+![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)
 
-Newera is a foundational WordPress plugin scaffold that provides a robust architecture for building complex plugins. It includes:
+**A modern, production-ready WordPress plugin with comprehensive architecture and one-click deployment.**
 
+[Features](#features) • [Quick Start](#-quick-start-one-click-deployment) • [Documentation](#documentation) • [Contributing](#contributing)
+
+</div>
+
+---
+
+## 🚀 Quick Start: One-Click Deployment
+
+Deploy a complete WordPress environment with the Newera plugin in under 5 minutes:
+
+```bash
+# Clone the repository
+git clone https://github.com/jith-jstrange/NewEra.git
+cd NewEra
+
+# One-click deployment
+./deploy.sh
+```
+
+That's it! Access your site at http://localhost:8080
+
+**Alternative:** Using Make
+```bash
+make setup    # Initial setup
+make dev      # Start development environment
+```
+
+---
+
+## Features
+
+### 🏗️ Modern Architecture
 - **PSR-4 Autoloading** with Composer support
 - **Module-based Architecture** for extensible functionality
 - **Database Migration System** for schema management
 - **Advanced Logging System** with multiple log levels
 - **State Management** for persistent plugin data
-- **Admin Dashboard** with health monitoring and module management
-- **WP-Cron Integration** for scheduled tasks
-- **Security Best Practices** with capability checks and nonce validation
-- **🔒 Secure Credential Storage** with AES-256-CBC encryption
-- **🗄️ Dual-Mode Database Support** with external PostgreSQL/Neon/Supabase support
-- **🔄 Automatic Fallback** to WordPress DB if external database fails
-- **📊 Database Health Monitoring** with real-time connection metrics
+
+### 💳 Payments & Subscriptions
+- **Stripe Integration** with full API support
+- **Subscription Management** with automatic billing
+- **Webhook Processing** with signature validation
+- **Multiple Payment Methods** support
+- **Invoice Generation** and email delivery
+
+### 🔒 Security & Encryption
+- **AES-256-CBC Encryption** for credentials
+- **Secure Credential Storage** with WordPress salts
+- **Nonce Verification** on all forms
+- **Capability Checks** for admin actions
+- **SQL Injection Prevention** with prepared statements
+
+### 🗄️ Database Flexibility
+- **Dual-Mode Database Support** (WordPress/PostgreSQL)
+- **External Database Support** (Neon, Supabase)
+- **Automatic Fallback** to WordPress DB
+- **Real-time Health Monitoring**
+- **Connection Pooling** for performance
+
+### 🤖 AI & Integrations
+- **AI Command System** with OpenAI/Anthropic support
+- **Linear Integration** for project management
+- **Notion Integration** for documentation
+- **Better Auth** for authentication
+- **Analytics & Tracking**
+
+### 🐳 Deployment Ready
+- **Docker Compose** for full stack deployment
+- **One-Click Deploy Script** for easy setup
+- **CI/CD Pipelines** with GitHub Actions
+- **Production Optimized** with caching
+- **Health Checks** and monitoring
 
 ## Requirements
 
+### For One-Click Deployment (Recommended)
+- [Docker](https://docs.docker.com/get-docker/) 20.10 or higher
+- [Docker Compose](https://docs.docker.com/compose/install/) 2.0 or higher
+- 4GB RAM minimum (8GB recommended)
+
+### For Manual Installation
 - WordPress 5.0 or higher
-- PHP 7.4 or higher
+- PHP 7.4 or higher (PHP 8.2 recommended)
 - MySQL 5.6 or higher (or PostgreSQL 10+ for external database support)
 - PHP PDO extension with pdo_pgsql driver (optional, for external database support)
 
 ## Installation
 
-### 1. Download and Extract
+### Option 1: Docker (Recommended) 🐳
 
-Download the plugin files and extract them to your WordPress plugins directory:
+The easiest way to get started with a complete WordPress + Newera environment:
 
 ```bash
-wp-content/plugins/newera/
+# Clone the repository
+git clone https://github.com/jith-jstrange/NewEra.git
+cd NewEra
+
+# One-click deployment
+./deploy.sh
+
+# Or using Make
+make setup
+make dev
 ```
 
-### 2. Install Dependencies (No External Credentials Required)
+Access your site at http://localhost:8080
 
-This plugin is designed to work without external credentials. Dependencies are optional and can be installed locally:
+**What you get:**
+- WordPress 6.4 with PHP 8.2
+- MySQL 8.0 database
+- Redis cache
+- phpMyAdmin
+- Newera plugin pre-installed and activated
+
+### Option 2: Manual Installation
+
+For existing WordPress installations:
+
+#### 1. Download Plugin
 
 ```bash
-# Navigate to plugin directory
-cd wp-content/plugins/newera/
+# Download latest release
+git clone https://github.com/jith-jstrange/NewEra.git
+cd NewEra
+```
 
-# Install Composer dependencies (optional - plugin works without this)
+#### 2. Install Dependencies
+
+```bash
+# Install Composer dependencies
 composer install --no-dev --optimize-autoloader
 
-# Or install just for development
-composer install
+# Install Node dependencies and build assets (optional)
+npm install
+npm run build
 ```
 
-**Note:** The plugin will work perfectly fine without Composer. All required classes are included in the `/includes` directory and follow PSR-4 autoloading standards.
+#### 3. Install to WordPress
 
-### 3. WordPress Installation
+```bash
+# Copy to WordPress plugins directory
+cp -r . /path/to/wordpress/wp-content/plugins/newera/
+```
 
-1. Upload the plugin files to `/wp-content/plugins/newera/`
-2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Navigate to 'Newera' in your admin menu to access the dashboard
+#### 4. Activate Plugin
 
-### 4. Verify Installation
+1. Go to WordPress Admin → Plugins
+2. Find "Newera" in the list
+3. Click "Activate"
+4. Complete the setup wizard
+
+### Option 3: Using WP-CLI
+
+```bash
+# Install WordPress if needed
+wp core download
+
+# Navigate to plugins directory
+cd wp-content/plugins
+
+# Clone the plugin
+git clone https://github.com/jith-jstrange/NewEra.git newera
+
+# Activate the plugin
+wp plugin activate newera
+```
+
+### Verify Installation
 
 After activation:
 
-1. Check the Newera dashboard for system health
-2. Verify that all core modules are listed
-3. Confirm that the migration system is working
-4. Test that admin assets are loading properly
+1. Navigate to **Newera > Dashboard** in your admin menu
+2. Check system health status
+3. Verify all core modules are listed
+4. Confirm migrations ran successfully
+5. Test admin interface functionality
 
 ## Development
 
@@ -727,6 +845,91 @@ This plugin is licensed under the GPL v2 or later.
 ## Support
 
 For support and bug reports, please use the plugin's issue tracker or contact the development team.
+
+---
+
+## 📚 Quick Reference
+
+### Docker Commands
+
+```bash
+make dev          # Start development environment
+make build        # Build production assets
+make logs         # View container logs
+make shell        # Access WordPress container
+make db-backup    # Backup database
+make test         # Run tests
+make deploy       # Deploy to production
+```
+
+### NPM Scripts
+
+```bash
+npm run dev       # Build assets in development mode
+npm run build     # Build assets for production
+npm run watch     # Watch for changes and rebuild
+npm run lint      # Run linters
+```
+
+### Composer Scripts
+
+```bash
+composer test            # Run all tests
+composer test-coverage   # Run tests with coverage
+composer test-unit       # Run unit tests only
+```
+
+### Useful WordPress CLI Commands
+
+```bash
+# Inside WordPress container
+wp plugin list                    # List all plugins
+wp plugin activate newera         # Activate Newera
+wp newera status                  # Check plugin status
+wp db check                       # Check database connection
+```
+
+## 🎯 Key URLs
+
+- **Local Development:** http://localhost:8080
+- **WordPress Admin:** http://localhost:8080/wp-admin
+- **Newera Dashboard:** http://localhost:8080/wp-admin/admin.php?page=newera
+- **phpMyAdmin:** http://localhost:8081
+- **REST API:** http://localhost:8080/wp-json/newera/v1/
+
+## 🔧 Environment Variables
+
+Key environment variables in `.env`:
+
+```bash
+WORDPRESS_PORT=8080              # WordPress port
+MYSQL_PASSWORD=your-password     # Database password
+WORDPRESS_DEBUG=false            # Enable debug mode
+STRIPE_SECRET_KEY=sk_test_...    # Stripe API key
+REDIS_HOST=redis                 # Redis host
+```
+
+See `.env.example` for all available options.
+
+## 📖 Documentation
+
+- **[Deployment Guide](DEPLOYMENT.md)** - Complete deployment instructions
+- **[Stripe Integration](STRIPE_INTEGRATION.md)** - Stripe setup and usage
+- **[Testing Guide](TESTING.md)** - Testing instructions
+- **[External Database](EXTERNAL_DATABASE.md)** - PostgreSQL/Neon/Supabase setup
+
+## 🚀 Production Deployment Checklist
+
+- [ ] Update WordPress salts in `.env`
+- [ ] Set `WORDPRESS_DEBUG=false`
+- [ ] Use strong passwords
+- [ ] Configure SSL/HTTPS
+- [ ] Set up regular backups
+- [ ] Configure firewall rules
+- [ ] Enable Redis cache
+- [ ] Run `npm run build` for optimized assets
+- [ ] Review security headers
+- [ ] Set up monitoring
 
 ---
 

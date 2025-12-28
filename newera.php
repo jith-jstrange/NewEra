@@ -93,6 +93,9 @@ require_once NEWERA_INCLUDES_PATH . 'Admin/Dashboard.php';
 require_once NEWERA_INCLUDES_PATH . 'Admin/SetupWizard.php';
 require_once NEWERA_INCLUDES_PATH . 'AI/CommandHandler.php';
 
+// API endpoints
+require_once NEWERA_INCLUDES_PATH . 'API/HealthCheck.php';
+
 /**
  * Plugin activation hook
  */
