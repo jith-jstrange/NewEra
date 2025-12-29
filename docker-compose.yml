@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: newera-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-wordpress}
+      MYSQL_USER: ${MYSQL_USER:-wordpress}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-wordpress}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    networks:
+      - newera-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache (Optional but recommended)
+  redis:
+    image: redis:7-alpine
+    container_name: newera-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - newera-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # WordPress with Newera Plugin
+  wordpress:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: newera-wordpress
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # WordPress Database Configuration
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-wordpress}
+      WORDPRESS_DB_USER: ${MYSQL_USER:-wordpress}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD:-wordpress}
+      
+      # WordPress Configuration
+      WORDPRESS_TABLE_PREFIX: ${WORDPRESS_TABLE_PREFIX:-wp_}
+      WORDPRESS_DEBUG: ${WORDPRESS_DEBUG:-false}
+      WORDPRESS_DEBUG_LOG: ${WORDPRESS_DEBUG_LOG:-true}
+      WORDPRESS_DEBUG_DISPLAY: ${WORDPRESS_DEBUG_DISPLAY:-false}
+      
+      # WordPress Salts (Generate new ones for production!)
+      WORDPRESS_AUTH_KEY: ${WORDPRESS_AUTH_KEY:-put-your-unique-phrase-here}
+      WORDPRESS_SECURE_AUTH_KEY: ${WORDPRESS_SECURE_AUTH_KEY:-put-your-unique-phrase-here}
+      WORDPRESS_LOGGED_IN_KEY: ${WORDPRESS_LOGGED_IN_KEY:-put-your-unique-phrase-here}
+      WORDPRESS_NONCE_KEY: ${WORDPRESS_NONCE_KEY:-put-your-unique-phrase-here}
+      WORDPRESS_AUTH_SALT: ${WORDPRESS_AUTH_SALT:-put-your-unique-phrase-here}
+      WORDPRESS_SECURE_AUTH_SALT: ${WORDPRESS_SECURE_AUTH_SALT:-put-your-unique-phrase-here}
+      WORDPRESS_LOGGED_IN_SALT: ${WORDPRESS_LOGGED_IN_SALT:-put-your-unique-phrase-here}
+      WORDPRESS_NONCE_SALT: ${WORDPRESS_NONCE_SALT:-put-your-unique-phrase-here}
+      
+      # Newera Plugin Configuration
+      NEWERA_ENV: ${NEWERA_ENV:-production}
+      
+      # Redis Configuration
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./:/var/www/html/wp-content/plugins/newera
+      - logs_data:/var/www/html/wp-content/newera-logs
+    ports:
+      - "${WORDPRESS_PORT:-8080}:80"
+    networks:
+      - newera-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # phpMyAdmin (Optional - for database management)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: newera-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: ${MYSQL_USER:-wordpress}
+      PMA_PASSWORD: ${MYSQL_PASSWORD:-wordpress}
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "${PHPMYADMIN_PORT:-8081}:80"
+    networks:
+      - newera-network
+
+volumes:
+  db_data:
+    driver: local
+  redis_data:
+    driver: local
+  wordpress_data:
+    driver: local
+  logs_data:
+    driver: local
+
+networks:
+  newera-network:
+    driver: bridge

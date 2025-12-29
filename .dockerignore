@@ -1,0 +1,87 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# GitHub
+.github
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Node modules and dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Composer
+vendor
+composer.lock
+composer.phar
+
+# IDE and Editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing
+tests
+phpunit.xml
+.phpunit.result.cache
+coverage
+coverage.xml
+.phpunit.cache
+
+# Build artifacts
+dist
+build
+*.map
+
+# Logs
+*.log
+logs
+wp-content/newera-logs/*
+!wp-content/newera-logs/.gitkeep
+
+# Temporary files
+tmp
+temp
+*.tmp
+*.bak
+*.backup
+
+# Documentation (included separately)
+*.md
+!README.md
+
+# Docker files (not needed in image)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# CI/CD
+.gitlab-ci.yml
+.travis.yml
+azure-pipelines.yml
+
+# Database dumps
+*.sql
+*.sql.gz
+*.sqlite
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
