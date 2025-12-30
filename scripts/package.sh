@@ -54,10 +54,8 @@ echo "==> Installing Node dependencies and building assets..."
 npm install --no-progress --no-fund
 npm run build
 
-if [ ! -d "assets/js" ] || [ ! -d "assets/css" ] || \
-   [ -z "$(find assets/js -maxdepth 1 -name '*.js' -print -quit)" ] || \
-   [ -z "$(find assets/css -maxdepth 1 -name '*.css' -print -quit)" ]; then
-  echo "Asset build failed; expected JS/CSS outputs under assets/." >&2
+if [ ! -f "assets/js/admin.min.js" ] || [ ! -f "assets/css/admin.min.css" ]; then
+  echo "Asset build failed; expected admin bundles under assets/." >&2
   exit 1
 fi
 
