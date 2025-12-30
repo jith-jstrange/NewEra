@@ -99,7 +99,21 @@ make dev      # Start development environment
 
 ## Installation
 
-### Option 1: Docker (Recommended) 🐳
+### Option 1: Install from ZIP File (Quick Start) 📦
+
+The easiest way to install Newera on an existing WordPress installation:
+
+1. Download the latest plugin ZIP file (`newera-2.0.0.zip`)
+2. Go to your WordPress Admin → Plugins → Add New
+3. Click "Upload Plugin" at the top
+4. Select the `newera-2.0.0.zip` file
+5. Click "Install Now"
+6. After installation, click "Activate Plugin"
+7. Complete the Setup Wizard that appears
+
+That's it! Navigate to **Newera** in your admin menu to configure the plugin.
+
+### Option 2: Docker (Development) 🐳
 
 The easiest way to get started with a complete WordPress + Newera environment:
 
@@ -125,9 +139,9 @@ Access your site at http://localhost:8080
 - phpMyAdmin
 - Newera plugin pre-installed and activated
 
-### Option 2: Manual Installation
+### Option 3: Manual Installation (Development)
 
-For existing WordPress installations:
+For existing WordPress installations or development:
 
 #### 1. Download Plugin
 
@@ -862,6 +876,13 @@ make shell        # Access WordPress container
 make db-backup    # Backup database
 make test         # Run tests
 make deploy       # Deploy to production
+```
+
+### Build Plugin ZIP
+
+```bash
+# Build the production plugin ZIP for WordPress installation
+./build-plugin.sh        # Creates newera-{version}.zip
 ```
 
 ### NPM Scripts
