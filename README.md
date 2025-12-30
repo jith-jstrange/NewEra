@@ -2,10 +2,11 @@
 
 <div align="center">
 
-![WordPress Plugin](https://img.shields.io/badge/WordPress-5.0+-blue.svg)
-![PHP Version](https://img.shields.io/badge/PHP-7.4+-purple.svg)
+![WordPress Plugin](https://img.shields.io/badge/WordPress-6.0+-blue.svg)
+![PHP Version](https://img.shields.io/badge/PHP-8.0+-purple.svg)
 ![License](https://img.shields.io/badge/License-GPL%20v2-green.svg)
 ![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)
+![Version](https://img.shields.io/badge/Version-2.0.0-green.svg)
 
 **A modern, production-ready WordPress plugin with comprehensive architecture and one-click deployment.**
 
@@ -90,10 +91,11 @@ make dev      # Start development environment
 - 4GB RAM minimum (8GB recommended)
 
 ### For Manual Installation
-- WordPress 5.0 or higher
-- PHP 7.4 or higher (PHP 8.2 recommended)
-- MySQL 5.6 or higher (or PostgreSQL 10+ for external database support)
+- WordPress 6.0 or higher
+- PHP 8.0 or higher (PHP 8.2+ recommended)
+- MySQL 5.7 or higher (or PostgreSQL 10+ for external database support)
 - PHP PDO extension with pdo_pgsql driver (optional, for external database support)
+- PHP OpenSSL extension (for secure credential storage)
 
 ## Installation
 

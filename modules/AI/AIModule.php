@@ -366,88 +366,52 @@ class AIModule extends BaseModule {
     }
 }
 
-namespace {
-    if (!function_exists('newera_get_ai_manager')) {
-        /**
-         * @return \Newera\Modules\AI\AIManager|null
-         */
-        function newera_get_ai_manager() {
-            if (!function_exists('apply_filters')) {
-                return null;
-            }
-
-            return apply_filters('newera_get_ai_manager', null);
-        }
-    }
-
-    if (!function_exists('newera_ai_execute')) {
-        /**
-         * Execute an internal AI command via the AI command bus.
-         *
-         * @param string $command_id
-         * @param array $payload
-         * @return mixed|\WP_Error
-         */
-        function newera_ai_execute($command_id, $payload = []) {
-            $ai = newera_get_ai_manager();
-            if (!$ai) {
-                return new \WP_Error('newera_ai_unavailable', 'AI manager unavailable.');
-            }
-
-            return $ai->execute($command_id, $payload);
-        }
-    }
-
-    if (!function_exists('newera_ai_chat')) {
-        /**
-         * Convenience wrapper for a chat request.
-         *
-         * @param array $messages
-         * @param array $options
-         * @return mixed|\WP_Error
-         */
-        function newera_ai_chat($messages, $options = []) {
-            $ai = newera_get_ai_manager();
-            if (!$ai) {
-                return new \WP_Error('newera_ai_unavailable', 'AI manager unavailable.');
-            }
-
-            return $ai->chat($messages, $options);
-        }
-    }
-class AIModule extends BaseModule {
-    public function getId() { return 'AI'; }
-    public function getName() { return 'AI'; }
-    public function getDescription() { return 'AI Module'; }
-    public function getType() { return 'ai'; }
-    public function getSettingsSchema() { return []; }
-    public function validateCredentials($credentials) { return ['valid' => true]; }
-    public function saveCredentials($credentials) { return true; }
-    public function isConfigured() { return true; }
-    public function registerHooks() {}
-    
+// Global helper functions in root namespace
+if (!function_exists('newera_get_ai_manager')) {
     /**
-     * Set rate limit
-     * 
-     * @param array $params
-     * @return array
-     * @throws \Exception
+     * @return \Newera\Modules\AI\AIManager|null
      */
-    public function setRateLimit($params) {
-        $limit = $params['limit'] ?? 0;
-        $window = $params['window'] ?? 'hour';
-        
-        if ($limit <= 0) {
-            throw new \Exception('Limit must be greater than 0');
+    function newera_get_ai_manager() {
+        if (!function_exists('apply_filters')) {
+            return null;
         }
-        
-        $this->update_setting('rate_limit', $limit);
-        $this->update_setting('rate_window', $window);
-        
-        return [
-            'message' => "Rate limit set to $limit per $window",
-            'limit' => $limit,
-            'window' => $window
-        ];
+
+        return apply_filters('newera_get_ai_manager', null);
+    }
+}
+
+if (!function_exists('newera_ai_execute')) {
+    /**
+     * Execute an internal AI command via the AI command bus.
+     *
+     * @param string $command_id
+     * @param array $payload
+     * @return mixed|\WP_Error
+     */
+    function newera_ai_execute($command_id, $payload = []) {
+        $ai = newera_get_ai_manager();
+        if (!$ai) {
+            return new \WP_Error('newera_ai_unavailable', 'AI manager unavailable.');
+        }
+
+        return $ai->execute($command_id, $payload);
+    }
+}
+
+if (!function_exists('newera_ai_chat')) {
+    /**
+     * Convenience wrapper for a chat request.
+     *
+     * @param array $messages
+     * @param array $options
+     * @return mixed|\WP_Error
+     */
+    function newera_ai_chat($messages, $options = []) {
+        $ai = newera_get_ai_manager();
+        if (!$ai) {
+            return new \WP_Error('newera_ai_unavailable', 'AI manager unavailable.');
+        }
+
+        return $ai->chat($messages, $options);
     }
 }

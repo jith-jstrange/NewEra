@@ -1,18 +1,18 @@
 <?php
 /**
  * Plugin Name: Newera
- * Plugin URI: https://github.com/newera/plugin
- * Description: A modern WordPress plugin with comprehensive bootstrap and module architecture.
- * Version: 1.0.0
+ * Plugin URI: https://github.com/jith-jstrange/NewEra
+ * Description: A modern WordPress plugin with comprehensive bootstrap and module architecture, featuring Stripe payments, AI integrations, Linear/Notion sync, and secure credential storage.
+ * Version: 2.0.0
  * Author: Newera Team
  * Author URI: https://newera.dev
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: newera
  * Domain Path: /languages
- * Requires at least: 5.0
- * Tested up to: 6.4
- * Requires PHP: 7.4
+ * Requires at least: 6.0
+ * Tested up to: 6.7
+ * Requires PHP: 8.0
  * Network: false
  */
 
@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('NEWERA_VERSION', '1.0.0');
+define('NEWERA_VERSION', '2.0.0');
 define('NEWERA_PLUGIN_FILE', __FILE__);
 define('NEWERA_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('NEWERA_PLUGIN_PATH', plugin_dir_path(__FILE__));
@@ -33,20 +33,20 @@ define('NEWERA_TEMPLATES_PATH', NEWERA_PLUGIN_PATH . 'templates/');
 define('NEWERA_MODULES_PATH', NEWERA_PLUGIN_PATH . 'modules/');
 
 // Check for required WordPress version
-if (version_compare(get_bloginfo('version'), '5.0', '<')) {
+if (version_compare(get_bloginfo('version'), '6.0', '<')) {
     add_action('admin_notices', function() {
         echo '<div class="notice notice-error"><p>';
-        echo __('Newera requires WordPress 5.0 or later.', 'newera');
+        echo __('Newera requires WordPress 6.0 or later.', 'newera');
         echo '</p></div>';
     });
     return;
 }
 
 // Check for required PHP version
-if (version_compare(PHP_VERSION, '7.4', '<')) {
+if (version_compare(PHP_VERSION, '8.0', '<')) {
     add_action('admin_notices', function() {
         echo '<div class="notice notice-error"><p>';
-        echo __('Newera requires PHP 7.4 or later.', 'newera');
+        echo __('Newera requires PHP 8.0 or later.', 'newera');
         echo '</p></div>';
     });
     return;
