@@ -536,7 +536,7 @@ import '../css/admin.css';
             '<': '<',
             '>': '>',
             '"': '"',
-            "'": '''
+            "'": '&#39;'
         };
         return text.replace(/[&<>"']/g, function(m) { return map[m]; });
     };

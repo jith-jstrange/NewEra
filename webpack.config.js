@@ -11,7 +11,8 @@ module.exports = (env, argv) => {
       admin: './includes/Assets/js/admin.js',
     },
     output: {
-      path: path.resolve(__dirname, 'dist'),
+      // Match the filenames enqueued by the plugin (assets/js/admin.min.js, assets/css/admin.min.css)
+      path: path.resolve(__dirname, 'assets'),
       filename: 'js/[name].min.js',
       clean: true,
     },

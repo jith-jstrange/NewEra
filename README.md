@@ -176,6 +176,25 @@ git clone https://github.com/jith-jstrange/NewEra.git newera
 wp plugin activate newera
 ```
 
+### Option 4: Upload Ready ZIP
+
+Generate an uploadable plugin archive (requires Composer and npm):
+
+```bash
+# From repository root
+make package
+# or
+./scripts/package.sh
+```
+
+Upload `build/newera.zip` via **Plugins → Add New → Upload Plugin** in wp-admin, then click **Install Now** and **Activate**.
+
+If you encounter GitHub rate limits while installing PHP dependencies, export a token just for the packaging step:
+
+```bash
+COMPOSER_TOKEN=ghp_your_token_here make package
+```
+
 ### Verify Installation
 
 After activation:

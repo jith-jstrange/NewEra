@@ -1,7 +1,7 @@
 # Newera WordPress Plugin - Makefile
 # Simplifies common development and deployment tasks
 
-.PHONY: help install build deploy test clean up down logs shell db-backup db-restore
+.PHONY: help install build deploy test clean up down logs shell db-backup db-restore package
 
 # Default target
 .DEFAULT_GOAL := help
@@ -142,6 +142,9 @@ deploy-quick: ## Quick deploy without rebuilding containers
 	@npm run build
 	@docker-compose restart
 	@echo "$(GREEN)✓ Quick deployment complete$(NC)"
+
+package: ## Build uploadable plugin zip (build/newera.zip)
+	@./scripts/package.sh
 
 ##@ Cleanup
 

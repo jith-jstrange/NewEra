@@ -24,6 +24,7 @@ wp-content/newera-logs/
 wp-content/uploads/newera/
 
 # Package files
+build/
 *.tar.gz
 *.zip
 
