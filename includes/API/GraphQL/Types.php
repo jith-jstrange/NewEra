@@ -117,11 +117,11 @@ class CreateClientInputType extends InputObjectType {
             'name' => 'CreateClientInput',
             'fields' => [
                 'name' => ['type' => \GraphQL\Type\Definition\NonNullType::getInstance(\GraphQL\Type\Definition\StringType::getInstance())],
-                'email' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'phone' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'company' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
+                'email' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'phone' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'company' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
                 'status' => ['type' => new ClientStatusEnum()],
-                'notes' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()]
+                'notes' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -152,13 +152,13 @@ class UpdateClientInputType extends InputObjectType {
         $config = [
             'name' => 'UpdateClientInput',
             'fields' => [
-                'id' => ['type' => \GraphQL<TypeDefinition\IDType>::getInstance()],
-                'name' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'email' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'phone' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'company' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
+                'id' => ['type' => \GraphQL\Type\Definition\IDType::getInstance()],
+                'name' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'email' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'phone' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'company' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
                 'status' => ['type' => new ClientStatusEnum()],
-                'notes' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()]
+                'notes' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -174,7 +174,7 @@ class UpdateClientPayloadType extends ObjectType {
             'name' => 'UpdateClientPayload',
             'fields' => [
                 'client' => ['type' => new ClientType($state_manager)],
-                'errors' => ['type' => new \GraphQL<TypeDefinition\ListType>(new \GraphQL<TypeDefinition\StringType>())]
+                'errors' => ['type' => new \GraphQL\Type\Definition\ListType(new \GraphQL\Type\Definition\StringType())]
             ]
         ];
         parent::__construct($config);
@@ -189,8 +189,8 @@ class DeleteClientPayloadType extends ObjectType {
         $config = [
             'name' => 'DeleteClientPayload',
             'fields' => [
-                'deleted' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()],
-                'errors' => ['type' => new \GraphQL<TypeDefinition\ListType>(new \GraphQL<TypeDefinition\StringType>())]
+                'deleted' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()],
+                'errors' => ['type' => new \GraphQL\Type\Definition\ListType(new \GraphQL\Type\Definition\StringType())]
             ]
         ];
         parent::__construct($config);
@@ -205,16 +205,16 @@ class ProjectType extends ObjectType {
         $config = [
             'name' => 'Project',
             'fields' => [
-                'id' => ['type' => \GraphQL<TypeDefinition\IDType>::getInstance()],
-                'name' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'description' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'clientId' => ['type' => \GraphQL<TypeDefinition\IDType>::getInstance()],
+                'id' => ['type' => \GraphQL\Type\Definition\IDType::getInstance()],
+                'name' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'description' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'clientId' => ['type' => \GraphQL\Type\Definition\IDType::getInstance()],
                 'status' => ['type' => new ProjectStatusEnum()],
-                'startDate' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'endDate' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'budget' => ['type' => \GraphQL<TypeDefinition\FloatType>::getInstance()],
-                'createdAt' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'updatedAt' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()]
+                'startDate' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'endDate' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'budget' => ['type' => \GraphQL\Type\Definition\FloatType::getInstance()],
+                'createdAt' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'updatedAt' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -248,13 +248,13 @@ class CreateProjectInputType extends InputObjectType {
         $config = [
             'name' => 'CreateProjectInput',
             'fields' => [
-                'name' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'description' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'clientId' => ['type' => \GraphQL<TypeDefinition\IDType>::getInstance()],
+                'name' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'description' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'clientId' => ['type' => \GraphQL\Type\Definition\IDType::getInstance()],
                 'status' => ['type' => new ProjectStatusEnum()],
-                'startDate' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'endDate' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'budget' => ['type' => \GraphQL<TypeDefinition\FloatType>::getInstance()]
+                'startDate' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'endDate' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'budget' => ['type' => \GraphQL\Type\Definition\FloatType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -269,14 +269,14 @@ class UpdateProjectInputType extends InputObjectType {
         $config = [
             'name' => 'UpdateProjectInput',
             'fields' => [
-                'id' => ['type' => \GraphQL<TypeDefinition\IDType>::getInstance()],
-                'name' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'description' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'clientId' => ['type' => \GraphQL<TypeDefinition\IDType>::getInstance()],
+                'id' => ['type' => \GraphQL\Type\Definition\IDType::getInstance()],
+                'name' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'description' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'clientId' => ['type' => \GraphQL\Type\Definition\IDType::getInstance()],
                 'status' => ['type' => new ProjectStatusEnum()],
-                'startDate' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'endDate' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'budget' => ['type' => \GraphQL<TypeDefinition\FloatType>::getInstance()]
+                'startDate' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'endDate' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'budget' => ['type' => \GraphQL\Type\Definition\FloatType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -292,7 +292,7 @@ class CreateProjectPayloadType extends ObjectType {
             'name' => 'CreateProjectPayload',
             'fields' => [
                 'project' => ['type' => new ProjectType($state_manager)],
-                'errors' => ['type' => new \GraphQL<TypeDefinition\ListType>(new \GraphQL<TypeDefinition\StringType>())]
+                'errors' => ['type' => new \GraphQL\Type\Definition\ListType(new \GraphQL\Type\Definition\StringType())]
             ]
         ];
         parent::__construct($config);
@@ -308,7 +308,7 @@ class UpdateProjectPayloadType extends ObjectType {
             'name' => 'UpdateProjectPayload',
             'fields' => [
                 'project' => ['type' => new ProjectType($state_manager)],
-                'errors' => ['type' => new \GraphQL<TypeDefinition\ListType>(new \GraphQL<TypeDefinition\StringType>())]
+                'errors' => ['type' => new \GraphQL\Type\Definition\ListType(new \GraphQL\Type\Definition\StringType())]
             ]
         ];
         parent::__construct($config);
@@ -323,8 +323,8 @@ class DeleteProjectPayloadType extends ObjectType {
         $config = [
             'name' => 'DeleteProjectPayload',
             'fields' => [
-                'deleted' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()],
-                'errors' => ['type' => new \GraphQL<TypeDefinition\ListType>(new \GraphQL<TypeDefinition\StringType>())]
+                'deleted' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()],
+                'errors' => ['type' => new \GraphQL\Type\Definition\ListType(new \GraphQL\Type\Definition\StringType())]
             ]
         ];
         parent::__construct($config);
@@ -339,10 +339,10 @@ class ProjectConnectionType extends ObjectType {
         $config = [
             'name' => 'ProjectConnection',
             'fields' => [
-                'edges' => ['type' => \GraphQL<TypeDefinition\ListType>::getInstance(new \GraphQL<TypeDefinition\StringType>())],
-                'nodes' => ['type' => \GraphQL<TypeDefinition\ListType>::getInstance(new \GraphQL<TypeDefinition\StringType>())],
+                'edges' => ['type' => \GraphQL\Type\Definition\ListType::getInstance(new \GraphQL\Type\Definition\StringType())],
+                'nodes' => ['type' => \GraphQL\Type\Definition\ListType::getInstance(new \GraphQL\Type\Definition\StringType())],
                 'pageInfo' => ['type' => new PageInfoType()],
-                'totalCount' => ['type' => \GraphQL<TypeDefinition\IntType>::getInstance()]
+                'totalCount' => ['type' => \GraphQL\Type\Definition\IntType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -358,7 +358,7 @@ class ProjectFilterInputType extends InputObjectType {
             'name' => 'ProjectFilter',
             'fields' => [
                 'status' => ['type' => new ProjectStatusEnum()],
-                'clientId' => ['type' => \GraphQL<TypeDefinition\IDType>::getInstance()]
+                'clientId' => ['type' => \GraphQL\Type\Definition\IDType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -373,13 +373,13 @@ class SubscriptionType extends ObjectType {
         $config = [
             'name' => 'Subscription',
             'fields' => [
-                'id' => ['type' => \GraphQL<TypeDefinition\IDType>::getInstance()],
-                'planName' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'amount' => ['type' => \GraphQL<TypeDefinition\FloatType>::getInstance()],
-                'currency' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'billingCycle' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'status' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'createdAt' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()]
+                'id' => ['type' => \GraphQL\Type\Definition\IDType::getInstance()],
+                'planName' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'amount' => ['type' => \GraphQL\Type\Definition\FloatType::getInstance()],
+                'currency' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'billingCycle' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'status' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'createdAt' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -394,10 +394,10 @@ class SubscriptionConnectionType extends ObjectType {
         $config = [
             'name' => 'SubscriptionConnection',
             'fields' => [
-                'edges' => ['type' => \GraphQL<TypeDefinition\ListType>::getInstance(new \GraphQL<TypeDefinition\StringType>())],
-                'nodes' => ['type' => \GraphQL<TypeDefinition\ListType>::getInstance(new \GraphQL<TypeDefinition\StringType>())],
+                'edges' => ['type' => \GraphQL\Type\Definition\ListType::getInstance(new \GraphQL\Type\Definition\StringType())],
+                'nodes' => ['type' => \GraphQL\Type\Definition\ListType::getInstance(new \GraphQL\Type\Definition\StringType())],
                 'pageInfo' => ['type' => new PageInfoType()],
-                'totalCount' => ['type' => \GraphQL<TypeDefinition\IntType>::getInstance()]
+                'totalCount' => ['type' => \GraphQL\Type\Definition\IntType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -412,11 +412,11 @@ class CreateSubscriptionInputType extends InputObjectType {
         $config = [
             'name' => 'CreateSubscriptionInput',
             'fields' => [
-                'planName' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'amount' => ['type' => \GraphQL<TypeDefinition\FloatType>::getInstance()],
-                'currency' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'billingCycle' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'status' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()]
+                'planName' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'amount' => ['type' => \GraphQL\Type\Definition\FloatType::getInstance()],
+                'currency' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'billingCycle' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'status' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -432,7 +432,7 @@ class CreateSubscriptionPayloadType extends ObjectType {
             'name' => 'CreateSubscriptionPayload',
             'fields' => [
                 'subscription' => ['type' => new SubscriptionType($state_manager)],
-                'errors' => ['type' => new \GraphQL<TypeDefinition\ListType>(new \GraphQL<TypeDefinition\StringType>())]
+                'errors' => ['type' => new \GraphQL\Type\Definition\ListType(new \GraphQL\Type\Definition\StringType())]
             ]
         ];
         parent::__construct($config);
@@ -447,10 +447,10 @@ class SettingsType extends ObjectType {
         $config = [
             'name' => 'Settings',
             'fields' => [
-                'apiEnabled' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()],
-                'corsEnabled' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()],
-                'rateLimitingEnabled' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()],
-                'webhookDeliveryEnabled' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()]
+                'apiEnabled' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()],
+                'corsEnabled' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()],
+                'rateLimitingEnabled' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()],
+                'webhookDeliveryEnabled' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -465,10 +465,10 @@ class UpdateSettingsInputType extends InputObjectType {
         $config = [
             'name' => 'UpdateSettingsInput',
             'fields' => [
-                'apiEnabled' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()],
-                'corsEnabled' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()],
-                'rateLimitingEnabled' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()],
-                'webhookDeliveryEnabled' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()]
+                'apiEnabled' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()],
+                'corsEnabled' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()],
+                'rateLimitingEnabled' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()],
+                'webhookDeliveryEnabled' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -484,7 +484,7 @@ class UpdateSettingsPayloadType extends ObjectType {
             'name' => 'UpdateSettingsPayload',
             'fields' => [
                 'settings' => ['type' => new SettingsType(null)],
-                'errors' => ['type' => new \GraphQL<TypeDefinition\ListType>(new \GraphQL<TypeDefinition\StringType>())]
+                'errors' => ['type' => new \GraphQL\Type\Definition\ListType(new \GraphQL\Type\Definition\StringType())]
             ]
         ];
         parent::__construct($config);
@@ -499,11 +499,11 @@ class WebhookType extends ObjectType {
         $config = [
             'name' => 'Webhook',
             'fields' => [
-                'id' => ['type' => \GraphQL<TypeDefinition\IDType>::getInstance()],
-                'url' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'events' => ['type' => new \GraphQL<TypeDefinition\ListType>(\GraphQL<TypeDefinition\StringType>::getInstance())],
-                'active' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()],
-                'createdAt' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()]
+                'id' => ['type' => \GraphQL\Type\Definition\IDType::getInstance()],
+                'url' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'events' => ['type' => new \GraphQL\Type\Definition\ListType(\GraphQL\Type\Definition\StringType::getInstance())],
+                'active' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()],
+                'createdAt' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -518,10 +518,10 @@ class WebhookConnectionType extends ObjectType {
         $config = [
             'name' => 'WebhookConnection',
             'fields' => [
-                'edges' => ['type' => \GraphQL<TypeDefinition\ListType>::getInstance(new \GraphQL<TypeDefinition\StringType>())],
-                'nodes' => ['type' => \GraphQL<TypeDefinition\ListType>::getInstance(new \GraphQL<TypeDefinition\StringType>())],
+                'edges' => ['type' => \GraphQL\Type\Definition\ListType::getInstance(new \GraphQL\Type\Definition\StringType())],
+                'nodes' => ['type' => \GraphQL\Type\Definition\ListType::getInstance(new \GraphQL\Type\Definition\StringType())],
                 'pageInfo' => ['type' => new PageInfoType()],
-                'totalCount' => ['type' => \GraphQL<TypeDefinition\IntType>::getInstance()]
+                'totalCount' => ['type' => \GraphQL\Type\Definition\IntType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -536,10 +536,10 @@ class CreateWebhookInputType extends InputObjectType {
         $config = [
             'name' => 'CreateWebhookInput',
             'fields' => [
-                'url' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'events' => ['type' => new \GraphQL<TypeDefinition\ListType>(\GraphQL<TypeDefinition\StringType>::getInstance())],
-                'secret' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'active' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()]
+                'url' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'events' => ['type' => new \GraphQL\Type\Definition\ListType(\GraphQL\Type\Definition\StringType::getInstance())],
+                'secret' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'active' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -554,11 +554,11 @@ class UpdateWebhookInputType extends InputObjectType {
         $config = [
             'name' => 'UpdateWebhookInput',
             'fields' => [
-                'id' => ['type' => \GraphQL<TypeDefinition\IDType>::getInstance()],
-                'url' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'events' => ['type' => new \GraphQL<TypeDefinition\ListType>(\GraphQL<TypeDefinition\StringType>::getInstance())],
-                'secret' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'active' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()]
+                'id' => ['type' => \GraphQL\Type\Definition\IDType::getInstance()],
+                'url' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'events' => ['type' => new \GraphQL\Type\Definition\ListType(\GraphQL\Type\Definition\StringType::getInstance())],
+                'secret' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'active' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -574,7 +574,7 @@ class CreateWebhookPayloadType extends ObjectType {
             'name' => 'CreateWebhookPayload',
             'fields' => [
                 'webhook' => ['type' => new WebhookType($state_manager)],
-                'errors' => ['type' => new \GraphQL<TypeDefinition\ListType>(new \GraphQL<TypeDefinition\StringType>())]
+                'errors' => ['type' => new \GraphQL\Type\Definition\ListType(new \GraphQL\Type\Definition\StringType())]
             ]
         ];
         parent::__construct($config);
@@ -590,7 +590,7 @@ class UpdateWebhookPayloadType extends ObjectType {
             'name' => 'UpdateWebhookPayload',
             'fields' => [
                 'webhook' => ['type' => new WebhookType($state_manager)],
-                'errors' => ['type' => new \GraphQL<TypeDefinition\ListType>(new \GraphQL<TypeDefinition\StringType>())]
+                'errors' => ['type' => new \GraphQL\Type\Definition\ListType(new \GraphQL\Type\Definition\StringType())]
             ]
         ];
         parent::__construct($config);
@@ -605,8 +605,8 @@ class DeleteWebhookPayloadType extends ObjectType {
         $config = [
             'name' => 'DeleteWebhookPayload',
             'fields' => [
-                'deleted' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()],
-                'errors' => ['type' => new \GraphQL<TypeDefinition\ListType>(new \GraphQL<TypeDefinition\StringType>())]
+                'deleted' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()],
+                'errors' => ['type' => new \GraphQL\Type\Definition\ListType(new \GraphQL\Type\Definition\StringType())]
             ]
         ];
         parent::__construct($config);
@@ -621,11 +621,11 @@ class ActivityType extends ObjectType {
         $config = [
             'name' => 'Activity',
             'fields' => [
-                'id' => ['type' => \GraphQL<TypeDefinition\IDType>::getInstance()],
+                'id' => ['type' => \GraphQL\Type\Definition\IDType::getInstance()],
                 'type' => ['type' => new ActivityTypeEnum()],
-                'description' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'timestamp' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'userId' => ['type' => \GraphQL<TypeDefinition\IDType>::getInstance()]
+                'description' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'timestamp' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'userId' => ['type' => \GraphQL\Type\Definition\IDType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -658,10 +658,10 @@ class ActivityConnectionType extends ObjectType {
         $config = [
             'name' => 'ActivityConnection',
             'fields' => [
-                'edges' => ['type' => \GraphQL<TypeDefinition\ListType>::getInstance(new \GraphQL<TypeDefinition\StringType>())],
-                'nodes' => ['type' => \GraphQL<TypeDefinition\ListType>::getInstance(new \GraphQL<TypeDefinition\StringType>())],
+                'edges' => ['type' => \GraphQL\Type\Definition\ListType::getInstance(new \GraphQL\Type\Definition\StringType())],
+                'nodes' => ['type' => \GraphQL\Type\Definition\ListType::getInstance(new \GraphQL\Type\Definition\StringType())],
                 'pageInfo' => ['type' => new PageInfoType()],
-                'totalCount' => ['type' => \GraphQL<TypeDefinition\IntType>::getInstance()]
+                'totalCount' => ['type' => \GraphQL\Type\Definition\IntType::getInstance()]
             ]
         ];
         parent::__construct($config);
@@ -676,10 +676,10 @@ class PageInfoType extends ObjectType {
         $config = [
             'name' => 'PageInfo',
             'fields' => [
-                'hasNextPage' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()],
-                'hasPreviousPage' => ['type' => \GraphQL<TypeDefinition\BooleanType>::getInstance()],
-                'startCursor' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()],
-                'endCursor' => ['type' => \GraphQL<TypeDefinition\StringType>::getInstance()]
+                'hasNextPage' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()],
+                'hasPreviousPage' => ['type' => \GraphQL\Type\Definition\BooleanType::getInstance()],
+                'startCursor' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()],
+                'endCursor' => ['type' => \GraphQL\Type\Definition\StringType::getInstance()]
             ]
         ];
         parent::__construct($config);

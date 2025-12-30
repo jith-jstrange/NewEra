@@ -3,6 +3,9 @@ vendor/
 node_modules/
 composer.phar
 
+# Build artifacts
+dist/
+
 # WordPress core
 wp-config.php
 wp-content/uploads/
