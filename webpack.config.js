@@ -11,8 +11,8 @@ module.exports = (env, argv) => {
       admin: './includes/Assets/js/admin.js',
     },
     output: {
-      path: path.resolve(__dirname, 'dist'),
-      filename: 'js/[name].min.js',
+      path: path.resolve(__dirname, 'assets'),
+      filename: 'js/[name].js',
       clean: true,
     },
     module: {
@@ -58,7 +58,7 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new MiniCssExtractPlugin({
-        filename: 'css/[name].min.css',
+        filename: 'css/[name].css',
       }),
     ],
     optimization: {
