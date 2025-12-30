@@ -47,7 +47,7 @@ fi
 COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 echo "==> Installing Node dependencies and building assets..."
-npm install --no-progress --no-fund --no-package-lock
+npm install --no-progress --no-fund
 npm run build
 
 if [ ! -d "assets/js" ] || [ ! -d "assets/css" ] || \
@@ -57,7 +57,7 @@ if [ ! -d "assets/js" ] || [ ! -d "assets/css" ] || \
   exit 1
 fi
 
-rm -rf node_modules
+rm -rf node_modules package-lock.json
 
 popd >/dev/null
 
