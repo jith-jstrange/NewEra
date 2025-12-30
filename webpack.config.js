@@ -11,9 +11,9 @@ module.exports = (env, argv) => {
       admin: './includes/Assets/js/admin.js',
     },
     output: {
-      // Match the filenames enqueued by the plugin (assets/js/admin.js, assets/css/admin.css)
+      // Match the filenames enqueued by the plugin (assets/js/admin.min.js, assets/css/admin.min.css)
       path: path.resolve(__dirname, 'assets'),
-      filename: 'js/[name].js',
+      filename: 'js/[name].min.js',
       clean: true,
     },
     module: {
@@ -59,7 +59,7 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new MiniCssExtractPlugin({
-        filename: 'css/[name].css',
+        filename: 'css/[name].min.css',
       }),
     ],
     optimization: {

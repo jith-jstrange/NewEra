@@ -44,7 +44,11 @@ echo "==> Installing PHP dependencies..."
 if [ -n "${COMPOSER_TOKEN:-}" ]; then
   export COMPOSER_AUTH="{\"github-oauth\":{\"github.com\":\"${COMPOSER_TOKEN}\"}}"
 fi
-COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+if [ "$(id -u)" -eq 0 ]; then
+  echo "Running as root; enabling COMPOSER_ALLOW_SUPERUSER for Composer."
+  export COMPOSER_ALLOW_SUPERUSER=1
+fi
+composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 echo "==> Installing Node dependencies and building assets..."
 npm install --no-progress --no-fund

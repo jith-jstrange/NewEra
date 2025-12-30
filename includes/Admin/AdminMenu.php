@@ -128,7 +128,7 @@ class AdminMenu {
         // Enqueue CSS
         wp_enqueue_style(
             'newera-admin',
-            NEWERA_ASSETS_URL . 'css/admin.css',
+            NEWERA_ASSETS_URL . 'css/admin.min.css',
             [],
             NEWERA_VERSION
         );
@@ -136,7 +136,7 @@ class AdminMenu {
         // Enqueue JavaScript
         wp_enqueue_script(
             'newera-admin',
-            NEWERA_ASSETS_URL . 'js/admin.js',
+            NEWERA_ASSETS_URL . 'js/admin.min.js',
             ['jquery'],
             NEWERA_VERSION,
             true
