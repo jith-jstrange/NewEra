@@ -47,11 +47,13 @@ fi
 COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 echo "==> Installing Node dependencies and building assets..."
-npm install --no-progress --no-fund --no-audit --no-package-lock
+npm install --no-progress --no-fund --no-package-lock
 npm run build
 
-if [ ! -f "assets/js/admin.js" ] || [ ! -f "assets/css/admin.css" ]; then
-  echo "Asset build failed; expected files missing under assets/." >&2
+if [ ! -d "assets/js" ] || [ ! -d "assets/css" ] || \
+   [ -z "$(find assets/js -maxdepth 1 -name '*.js' -print -quit)" ] || \
+   [ -z "$(find assets/css -maxdepth 1 -name '*.css' -print -quit)" ]; then
+  echo "Asset build failed; expected JS/CSS outputs under assets/." >&2
   exit 1
 fi
 

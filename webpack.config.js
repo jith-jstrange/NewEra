@@ -11,6 +11,7 @@ module.exports = (env, argv) => {
       admin: './includes/Assets/js/admin.js',
     },
     output: {
+      // Match the filenames enqueued by the plugin (assets/js/admin.js, assets/css/admin.css)
       path: path.resolve(__dirname, 'assets'),
       filename: 'js/[name].js',
       clean: true,
